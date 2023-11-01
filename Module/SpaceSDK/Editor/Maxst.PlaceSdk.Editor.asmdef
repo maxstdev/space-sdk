@@ -1,0 +1,32 @@
+{
+    "name": "Maxst.PlaceSDK.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:cbfdca87e247d3a49986d4759bbc1ccc",
+        "GUID:8e3d269cf04faab4894881f162683392",
+        "GUID:93dfb46a4941698438e1e2dce7f5e021",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:3d354272d3f2f4c3387dbccbaebd0f60",
+        "GUID:478a2357cc57436488a56e564b08d223",
+        "GUID:5723fb2b58d866c43a74ff3270bcc927"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor",
+        "iOS",
+        "macOSStandalone",
+        "WebGL",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

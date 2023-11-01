@@ -1,0 +1,22 @@
+{
+    "name": "Passport.NetCore.Editor",
+    "rootNamespace": "",
+    "references": [
+		"GUID:8e3d269cf04faab4894881f162683392",
+        "GUID:80faf11864190384584f30b3e75251d9",
+        "GUID:cbfdca87e247d3a49986d4759bbc1ccc",
+        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

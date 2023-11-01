@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8737f31637c32cb4b9623fe7b455aa97, type: 3}
+  m_Name: EnvSettingFromMaxst
+  m_EditorClassIdentifier: 
+  keys: 000000000100000002000000
+  values:
+  - authUrlSetting: {fileID: 11400000, guid: a778deafa10bc9741bfacb7a4fa38cae, type: 2}
+    webLinkSetting: {fileID: 11400000, guid: 21fc2788b906eeb418fad0b20c49fbb3, type: 2}
+    OpenIDConnectSetting: {fileID: 11400000, guid: e27dc006c251e4526b4eaf1c793c05d3,
+      type: 2}
+  - authUrlSetting: {fileID: 11400000, guid: 02dfb63e88e8ef4448f4ef749733eaab, type: 2}
+    webLinkSetting: {fileID: 11400000, guid: 9bee833317d09c945a841f5d9dfffc4c, type: 2}
+    OpenIDConnectSetting: {fileID: 11400000, guid: f2062c879740d426ca46aab539375fcd,
+      type: 2}
+  - authUrlSetting: {fileID: 11400000, guid: 81c4ac12660fbdb43971fff5d38c7aae, type: 2}
+    webLinkSetting: {fileID: 11400000, guid: ccc05de89cca5654d900702334238602, type: 2}
+    OpenIDConnectSetting: {fileID: 11400000, guid: ea437f308de7849e2b9e9ce8070fe25f,
+      type: 2}

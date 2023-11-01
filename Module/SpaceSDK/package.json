@@ -1,0 +1,84 @@
+{
+  "name": "com.maxst.spacesdk",
+  "version": "0.1.2",
+  "displayName": "Maxst Space SDK",
+  "description": "Maxst Space SDK",
+  "unity": "2022.3",
+  "author": {
+    "name": "MAXST Co., Ltd",
+    "email": "dev@maxst.com"
+  },
+  "scopedRegistries": [
+    {
+      "name": "UniTask",
+      "url": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "scopes": [
+        "com.cysharp.unitask"
+      ]
+    },
+    {
+      "name": "UniRx",
+      "url": "https://github.com/neuecc/UniRx.git?path=Assets/Plugins/UniRx/Scripts",
+      "scopes": [
+        "com.neuecc.unirx"
+      ]
+    },
+    {
+      "name": "Scriptable Dictionary",
+      "url": "https://github.com/abrusle/unity-scriptable-dictionary.git",
+      "scopes": [
+        "net.abrusle.unity-scriptable.dictionary"
+      ]
+    },
+    {
+      "name": "Unity Content Team Resources",
+      "url": "https://bitbucket.org/maxstcorp/content-team-resources.git",
+      "scopes": [
+        "com.maxst.content.resoruces"
+      ]
+    },
+    {
+      "name": "KNN",
+      "url": "https://github.com/Level3Manatee/KNN.git",
+      "scopes": [
+        "KNN"
+      ]
+    },
+    {
+      "name": "Atteneder",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.atteneder"
+      ]
+    },
+    {
+      "name":"passport",
+      "url": "https://bitbucket.org/maxstcorp/unipassport.git?path=NetCore",
+      "scopes":[
+        "com.maxst.passport.core"
+      ]
+    },
+    {
+      "name":"unitoolbox",
+      "url": "https://bitbucket.org/maxstcorp/uni-toolbox.git",
+      "scopes":[
+        "com.maxst.unitoolbox"
+      ]
+    }
+  ],
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.0.2",
+    "com.unity.textmeshpro": "3.0.2",
+	  "com.unity.mathematics": "1.2.6",
+	  "com.atteneder.ktx": "2.2.3",
+	  "com.unity.editorcoroutines": "1.0.0"
+  },
+  "samples":
+    [
+        {
+            "displayName": "SpaceSDK",  
+            "description": "SpaceSDK Sample Scene",
+            "path": "Samples~/" 
+        }
+    ]
+}

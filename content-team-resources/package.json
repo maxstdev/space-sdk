@@ -1,0 +1,14 @@
+{
+  "name": "com.maxst.content.resoruces",
+  "version": "0.1.1",
+  "displayName": "Unity Content Team Resources",
+  "description": "This is Resource Project. Please include only what will be used in common for all projects.",
+  "unity": "2021.3",
+  "author": {
+    "name": "MAXST Co., Ltd",
+    "email": "dev@maxst.com"
+  },
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.2"
+  }
+}

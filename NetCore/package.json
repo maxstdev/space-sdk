@@ -1,0 +1,45 @@
+{
+  "name": "com.maxst.passport.core",
+  "version": "0.3.1",
+  "displayName": "Unity Passport Core",
+  "description": "This is Passport of the source",
+  "unity": "2021.3",
+  "author": {
+    "name": "MAXST Co., Ltd",
+    "email": "dev@maxst.com"
+  },
+  "scopedRegistries": [
+    {
+      "name": "UniTask",
+      "url": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "scopes": [
+        "com.cysharp.unitask"
+      ]
+    },
+    {
+      "name": "UniRx",
+      "url": "https://github.com/neuecc/UniRx.git?path=Assets/Plugins/UniRx/Scripts",
+      "scopes": [
+        "com.neuecc.unirx"
+      ]
+    },
+    {
+      "name": "Scriptable Dictionary",
+      "url": "https://github.com/abrusle/unity-scriptable-dictionary.git",
+      "scopes": [
+        "net.abrusle.unity-scriptable.dictionary"
+      ]
+    },
+    {
+      "name": "Unity Content Team Resources",
+      "url": "https://bitbucket.org/maxstcorp/content-team-resources.git",
+      "scopes": [
+        "com.maxst.content.resoruces"
+      ]
+    }
+  ],
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.0.2",
+    "com.unity.textmeshpro": "3.0.2"
+  }
+}
