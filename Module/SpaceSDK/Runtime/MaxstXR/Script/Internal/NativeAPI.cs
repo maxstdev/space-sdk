@@ -34,7 +34,7 @@ namespace maxstAR
         public static bool maxst_CameraDevice_setAsyncImage(bool isEnable) { return false; }
         public static void maxst_CameraDevice_setNewFrameAndPoseAndTimestamp(byte[] data, int length, int width, int height, int format, float[] pose, ulong timestamp) { }
         public static void maxst_CameraDevice_setNewVPSCameraPoseAndTimestamp(float[] pose, ulong timestamp) { }
-        public static void maxst_CameraDevice_setSyncCameraFrameAndPoseAndTimestamp(IntPtr[] textureIds, int textureLength, float[] pose, ulong timestamp, int trackingState, int trackingFailureReason) { }
+        public static void maxst_CameraDevice_setSyncCameraFrameAndPoseAndTimestamp(IntPtr[] textureIds, int textureLength, float[] pose, double azimuthAngle, double pitchAngle, double rollAngle, int platformType, ulong timestamp, int trackingState, int trackingFailureReason) { }
         public static void maxst_TrackerManager_startTracker() { }
         public static void maxst_TrackerManager_stopTracker() { }
         public static void maxst_TrackerManager_destroyTracker() { }
@@ -149,7 +149,7 @@ namespace maxstAR
         public static extern void maxst_CameraDevice_setNewVPSCameraPoseAndTimestamp(float[] pose, ulong timestamp);
 
         [DllImport(MaxstARLibName)]
-        public static extern void maxst_CameraDevice_setSyncCameraFrameAndPoseAndTimestamp(IntPtr[] textureIds, int textureLength, float[] pose, ulong timestamp, int trackingState, int trackingFailureReason);
+        public static extern void maxst_CameraDevice_setSyncCameraFrameAndPoseAndTimestamp(IntPtr[] textureIds, int textureLength, float[] pose, double azimuthAngle, double pitchAngle, double rollAngle, int platformType, ulong timestamp, int trackingState, int trackingFailureReason);
 
         #endregion
 

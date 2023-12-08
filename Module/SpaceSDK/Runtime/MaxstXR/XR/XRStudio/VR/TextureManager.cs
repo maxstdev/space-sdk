@@ -775,7 +775,7 @@ public class TextureManager : MonoBehaviour
     {
         if(maxstAR.XRAPI.Instance.GetAccessToken() == "")
         {
-            maxstAR.XRAPI.Instance.MakeAccessToken();
+            Debug.LogError("No AccessToken");
         }
         foreach (var header in maxstAR.XRAPI.Instance.GetHeaders())
         {

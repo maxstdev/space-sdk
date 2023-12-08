@@ -9,9 +9,9 @@ namespace MaxstXR.Place
 
         public override string Realm => "maxst";
 
-        public override string ApplicationId => "";
+        public override string ApplicationId => "fcb71831-975e-4705-836f-b55f90f87515";
 
-        public override string ApplicationKey => "";
+        public override string ApplicationKey => "7sjVDHJY9X4kj9nsa5XjxOrzvaYn0H1q";
 
         public override string GrantType => "client_credentials";
 

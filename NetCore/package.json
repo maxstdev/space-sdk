@@ -1,6 +1,6 @@
 {
   "name": "com.maxst.passport.core",
-  "version": "0.3.1",
+  "version": "0.3.8",
   "displayName": "Unity Passport Core",
   "description": "This is Passport of the source",
   "unity": "2021.3",

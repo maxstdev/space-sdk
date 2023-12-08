@@ -1,6 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Maxst.Passport;
-using Maxst.Token;
+using Maxst.Settings;
 using UnityEngine;
 
 namespace MaxstXR.Place
@@ -13,12 +13,23 @@ namespace MaxstXR.Place
         [SerializeField] private BundleDownloadController downloadController;
         [SerializeField] private PlaceScriptableObjects placeScriptableObjects;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void BeforeSceneLoad()
+        {
+            VersionController.Instance.SwitchMode(VersionController.Mode.Legacy, 
+                SpaceStep.PUBLIC,
+                EnvType.Prod);
+        }
+
         private void Start()
         {
-            if (SceneViewModel.CurrentPlace is null)
+            if (string.IsNullOrEmpty(SceneViewModel.CurrentMapKey()))
             {
-                TokenRepo.Instance.passportConfig = SpaceSDKSampleAuthConfig.Instance;
-                LoadAfterSelectPlace();
+                TokenRepo.Instance.passportConfig =
+                    EnvAdmin.Instance.CurrentEnv.Value == EnvType.Alpha ? 
+                    SpaceSDKSampleAuthConfigAlpha.Instance : SpaceSDKSampleAuthConfig.Instance;
+                //LoadAfterSelectPlace();
+                LoadAfterSelectSpace();
             }
         }
 
@@ -40,32 +51,53 @@ namespace MaxstXR.Place
             BundleDownloadViewModel.NotifyDownloadFinished.RemoveAllObserver(this);
         }
 
-
-        private async void LoadAfterSelectPlace()
+        private async void LoadAfterSelectSpace()
         {
             var dsv = DynamicSceneView.Instance(gameObject);
-            var place = await SceneViewModel.GetPlaceAsync(dsv, null, false);
-            Debug.Log($"LoadAfterSelectPlace place : {place.placeUniqueName}");
-            var spot = await SceneViewModel.GetSpotAsync(dsv, place, null, true);
-            Debug.Log($"LoadAfterSelectPlace spot : {spot.SpotName}");
-            downloadController.StartFetchProcessAsync(place, spot);
+            var space = await SceneViewModel.GetSpaceAsync(dsv, null, false);
+            if (space == null)
+            {
+                Debug.Log("space is null");
+                return;
+            }
+
+            Debug.Log($"LoadAfterSelectPlace place : {space}");
+            downloadController.StartFetchProcessAsync(space);
         }
 
-        private async UniTask ProcessNextSceneAsync(Place place, Spot spot)
+        private async UniTask ProcessNextSceneAsync(string space)
         {
-            placeScriptableObjects = await PlaceAddressable.LoadPlaceSOAsync(place.PlaceUniqueName);
+            placeScriptableObjects = await PlaceAddressable.LoadPlaceSOAsync(space);
             SceneViewModel.PlaceScriptableObjects = placeScriptableObjects;
-            Debug.Log($"ProcessNextSceneAsync complete : {place.PlaceUniqueName}");
-            await FindObjectOfType<DynamicSceneManager>().LoadPlaceSO(placeScriptableObjects, spot);
+            Debug.Log($"ProcessNextSceneAsync complete : {space}");
+            await FindObjectOfType<DynamicSceneManager>().LoadSpaceSO(placeScriptableObjects);
         }
 
-        private void OnNotifyDownloadFinished(Place place, Spot spot, bool success)
+        //private async void LoadAfterSelectPlace()
+        //{
+        //    var dsv = DynamicSceneView.Instance(gameObject);
+        //    var space = await SceneViewModel.GetPlaceAsync(dsv, null, false);
+        //    Debug.Log($"LoadAfterSelectPlace place : {space.placeUniqueName}");
+        //    var spot = await SceneViewModel.GetSpotAsync(dsv, place, null, true);
+        //    Debug.Log($"LoadAfterSelectPlace spot : {spot.SpotName}");
+        //    downloadController.StartFetchProcessAsync(place);
+        //}
+
+        //private async UniTask ProcessNextSceneAsync(Place place, Spot spot)
+        //{
+        //    placeScriptableObjects = await PlaceAddressable.LoadPlaceSOAsync(place.PlaceUniqueName);
+        //    SceneViewModel.PlaceScriptableObjects = placeScriptableObjects;
+        //    Debug.Log($"ProcessNextSceneAsync complete : {place.PlaceUniqueName}");
+        //    await FindObjectOfType<DynamicSceneManager>().LoadPlaceSO(placeScriptableObjects, spot);
+        //}
+
+        private void OnNotifyDownloadFinished(string space, bool success)
         {
             downloadController.GoNextStatus();
-            ProcessNextSceneAsync(place, spot).Forget();
+            ProcessNextSceneAsync(space).Forget();
         }
 
-        private void OnNotifySizeDownloaded(Place place, Spot spot, long size)
+        private void OnNotifySizeDownloaded(string space, long size)
         {
             Debug.Log("OnNotifySizeDownloaded called");
             if (size > 0)
@@ -74,21 +106,21 @@ namespace MaxstXR.Place
                 return;
             }
 
-            ProcessNextSceneAsync(place, spot).Forget();
+            ProcessNextSceneAsync(space).Forget();
         }
 
-        private void OnNotifyDownloadProgress(Place place, Spot spot, DownloadProgressStatus status)
+        private void OnNotifyDownloadProgress(string space, DownloadProgressStatus status)
         {
             var cur = FileController.GetSizeFormatString(status.downloadedBytes, FileController.SizeUnits.MB);
             var total = FileController.GetSizeFormatString(status.totalBytes, FileController.SizeUnits.MB);
         }
 
-        private void OnNotifyCatalogUpdated(Place place, Spot spot)
+        private void OnNotifyCatalogUpdated(string space)
         {
             downloadController.GoNextStatus();
         }
 
-        private void OnNotifyInitialized(Place place, Spot spot)
+        private void OnNotifyInitialized(string space)
         {
             downloadController.GoNextStatus();
         }

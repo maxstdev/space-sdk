@@ -13,7 +13,8 @@ namespace MaxstXR.Place
 
         public override bool IsInitialize()
         {
-            return !string.IsNullOrEmpty(XrSettings.NavigationLocation.Value);
+            //return !string.IsNullOrEmpty(XrSettings.NavigationLocation.Value);
+            return true;
         }
 
         public override float UnitDistance()

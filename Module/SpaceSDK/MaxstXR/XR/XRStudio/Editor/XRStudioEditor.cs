@@ -207,7 +207,7 @@ public class XRStudioEditor : Editor
                 }
                 trackableGameObject = XRStudioController.Instance.meshObject;
 
-                XRAPI.Instance.SetPlaceIdSpotId(trackable.placeId, trackable.spotId);
+                XRAPI.Instance.SetSpaceId(trackable.spaceId);
             }
         }
 

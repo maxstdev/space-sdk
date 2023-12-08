@@ -2,7 +2,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
+using UniRx;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -11,40 +12,112 @@ namespace MaxstXR.Extension
 {
     public class PovAnimation : MonoBehaviour, ITransitionDelegate
     {
+        public enum PovStatus
+        {
+            Idle = 0,
+            Prepare,
+            Play,
+            Pause,
+            Stop,
+        }
+
         [SerializeField] protected List<PovKeyFrame> frames = new List<PovKeyFrame>();
 
-        [field: SerializeField] public UnityEvent PovStart { get; private set; } = new UnityEvent();
+        [field: SerializeField] public UnityEvent<PovKeyFrame> PovStart { get; private set; } = new UnityEvent<PovKeyFrame>();
         [field: SerializeField] public UnityEvent<PovKeyFrame> PovResume { get; private set; } = new UnityEvent<PovKeyFrame>();
         [field: SerializeField] public UnityEvent<PovKeyFrame> PovPause { get; private set; } = new UnityEvent<PovKeyFrame>();
         [field: SerializeField] public UnityEvent<PovKeyFrame> PovStop { get; private set; } = new UnityEvent<PovKeyFrame>();
-        [field: SerializeField] public UnityEvent<PovKeyFrame> PovAniStart { get; private set; } = new UnityEvent<PovKeyFrame>();
-        [field: SerializeField] public UnityEvent<PovKeyFrame> PovAniEnd { get; private set; } = new UnityEvent<PovKeyFrame>();
-        [field: SerializeField] public UnityEvent Finalize { get; private set; } = new UnityEvent();
+        [field: SerializeField, HideInInspector] public PovKeyFrame CurrentKeyFrame { get; protected set; } = null;
+        [SerializeField, HideInInspector] protected SmoothCameraManager smoothCameraManager;
 
-        [SerializeField] protected SmoothCameraManager smoothCameraManager;
+        public ReactiveProperty<PovStatus> AnimationStatus { get; } = new ReactiveProperty<PovStatus>(PovStatus.Idle);
 
-        protected PovKeyFrame lastProcessKeyFrame;
+        private Coroutine processCoroutine = null;
+        protected CancellationTokenSource cancellationTokenSoruce;
 
         protected virtual void Awake()
         {
             smoothCameraManager = GetComponent<SmoothCameraManager>();
         }
 
-        private void OnDestroy()
-        {
-            Finalize?.Invoke();
-        }
-
         public async void Generate(List<PathModel> paths, UnityAction complete)
         {
             await UniTask.WaitUntil(() => smoothCameraManager);
+            AnimationStatus.Value = PovStatus.Idle;
             GenerateFrame(paths);
+            AnimationStatus.Value = PovStatus.Prepare;
             complete?.Invoke();
         }
 
         public void Procedure(PovKeyFrame frame = null)
         {
-            StartCoroutine(FramesProcess(frame));
+            if (cancellationTokenSoruce != null)
+            {
+                cancellationTokenSoruce.Cancel();
+                cancellationTokenSoruce = null;
+            }
+
+            cancellationTokenSoruce ??= new();
+
+            StopProcessCoroutine();
+            processCoroutine = StartCoroutine(FramesProcess(frame));
+        }
+
+        public async UniTask AnimationPlay()
+        {
+            if (frames.IsEmpty()) throw new OperationCanceledException("Frames is Empty");
+
+            if (CurrentKeyFrame == null)
+            {
+                Procedure();
+            }
+            else if (CurrentKeyFrame.IsLastKeyFrame)
+            {
+                Procedure();
+            }
+            else
+            {
+                Procedure(CurrentKeyFrame);
+            }
+
+            await UniTask.WaitUntil(() =>
+            {
+                return AnimationStatus.Value == PovStatus.Play;
+            });
+            AnimationStatus.Value = PovStatus.Play;
+        }
+
+        public async UniTask AnimationPause()
+        {
+            if (frames.IsEmpty()) throw new OperationCanceledException("Frames is Empty");
+            StopProcessCoroutine();
+            CurrentKeyFrame.RequestCancelStatus = PovStatus.Pause;
+            await UniTask.WaitUntil(() =>
+            {
+                return CurrentKeyFrame.RequestCancelStatus == PovStatus.Idle;
+            });
+            AnimationStatus.Value = PovStatus.Pause;
+        }
+
+
+        public async UniTask AnimationForceStop()
+        {
+            if (frames.IsEmpty()) throw new OperationCanceledException("Frames is Empty");
+            cancellationTokenSoruce?.Cancel();
+            StopProcessCoroutine();
+            cancellationTokenSoruce = null;
+            CurrentKeyFrame.RequestCancelStatus = PovStatus.Stop;
+            await UniTask.WaitUntil(() =>
+            {
+                return CurrentKeyFrame.RequestCancelStatus == PovStatus.Idle;
+            });
+            AnimationStatus.Value = PovStatus.Stop;
+        }
+
+        protected bool IsAnimationStop()
+        {
+            if (cancellationTokenSoruce == null) return true; 
+            return (cancellationTokenSoruce.IsCancellationRequested);
         }
 
         protected virtual void GenerateFrame(List<PathModel> paths)
@@ -53,76 +126,123 @@ namespace MaxstXR.Extension
             KeyFrameGenerator.ConvertPathModel(paths, smoothCameraManager, frames);
         }
 
+        private void StopProcessCoroutine()
+        {
+            if (processCoroutine != null)
+            {
+                StopCoroutine(processCoroutine);
+                processCoroutine = null;
+            }
+        }
+
         private IEnumerator FramesProcess(PovKeyFrame lastFrame = null)
         {
+            if (IsAnimationStop())
+            {
+                StopProcessCoroutine();
+                yield break;
+            }
+
             //Debug.Log($"FramesProcess : {frames.Count}");
-            int startIndex = 0;
-            if (lastFrame == null || lastFrame.IsLastKeyFrame)
-            {
-                PovStart?.Invoke();
-            }
-            else
-            {
-                startIndex = lastFrame.Index + 1;
-                PovResume.Invoke(frames[startIndex]); 
-            }
+            int startIndex = lastFrame == null || lastFrame.IsLastKeyFrame ? 0 : lastFrame.Index + 1;
 
             for (var i = startIndex; i < frames.Count; ++i)
             {
-                smoothCameraManager.HandlePovKeyFrame(frames[i], this);
+                if (IsAnimationStop())
+                {
+                    StopProcessCoroutine();
+                    yield break;
+                }
+
+                if (CurrentKeyFrame != null)
+                    CurrentKeyFrame.KeyFrameStatus = TransitionStatus.Idle;
+                CurrentKeyFrame = frames[i];
+                smoothCameraManager.HandlePovKeyFrame(CurrentKeyFrame, this);
+                UpdateStatusAtPlay(CurrentKeyFrame);
                 yield return new WaitUntil(() => smoothCameraManager.IsAddableTransitions());
             }
+
+            processCoroutine = null;
             yield break;
         }
 
-        void ITransitionDelegate.DownloadStart()
+        private void UpdateStatusAtPlay(PovKeyFrame keyFrame)
         {
-            
-        }
-
-        void ITransitionDelegate.DownloadProgess(float f)
-        {
-            
-        }
-
-        void ITransitionDelegate.DownloadComplete()
-        {
-            
-        }
-
-        void ITransitionDelegate.DownloadException(Exception e)
-        {
-            
-        }
-
-        void ITransitionDelegate.DownloadException(UnityWebRequest www)
-        {
-            
-        }
-
-        void ITransitionDelegate.AnimationStarted(PovController current, object sourceObject)
-        {
-            if (sourceObject is PovKeyFrame frame)
+            switch (AnimationStatus.Value)
             {
-                PovAniStart.Invoke(frame);
+                case PovStatus.Pause:
+                    PovResume?.Invoke(keyFrame);
+                    AnimationStatus.Value = PovStatus.Play;
+                    break;
+                case PovStatus.Idle:
+                case PovStatus.Stop:
+                case PovStatus.Prepare:
+                    PovStart?.Invoke(keyFrame);
+                    AnimationStatus.Value = PovStatus.Play;
+                    break;
+                default:
+                    break;
             }
         }
 
-        void ITransitionDelegate.AnimationFinished(PovController next, object sourceObject) 
+        void ITransitionDelegate.DownloadStart(PovKeyFrame keyFrame)
         {
-            if (sourceObject is PovKeyFrame frame)
+
+        }
+
+        void ITransitionDelegate.DownloadProgess(PovKeyFrame keyFrame, float f)
+        {
+
+        }
+
+        void ITransitionDelegate.DownloadComplete(PovKeyFrame keyFrame)
+        {
+
+        }
+
+        void ITransitionDelegate.DownloadException(PovKeyFrame keyFrame, Exception e)
+        {
+
+        }
+
+        void ITransitionDelegate.DownloadException(PovKeyFrame keyFrame, UnityWebRequest www)
+        {
+
+        }
+
+        void ITransitionDelegate.AnimationStarted(PovKeyFrame keyFrame)
+        {
+
+        }
+
+        void ITransitionDelegate.AnimationFinished(PovKeyFrame keyFrame)
+        {
+            if (keyFrame.KeyFrameSource == KeyFrameSource.Animation)
             {
-                //Debug.Log($"AnimationFinished {frame.Index}/{frame.KeyFrameType}/{frame.IsLastKeyFrame}");
-                PovAniEnd.Invoke(frame);
-                lastProcessKeyFrame = frame;
-                if (frame.IsLastKeyFrame)
+                switch (AnimationStatus.Value)
                 {
-                    PovStop?.Invoke(frame);
+                    case PovStatus.Pause:
+                        PovPause?.Invoke(keyFrame);
+                        break;
+                    case PovStatus.Play:
+                        if (keyFrame.IsLastKeyFrame)
+                        {
+                            AnimationStatus.Value = PovStatus.Stop;
+                            PovStop?.Invoke(keyFrame);
+                        }
+                        break;
+                    default:
+                        break;
                 }
             }
             else
             {
+                //need interrupt?? 
+            }
 
+            if (keyFrame.RequestCancelStatus != PovStatus.Idle)
+            {
+                keyFrame.RequestCancelStatus = PovStatus.Idle;
             }
         }
     }

@@ -12,5 +12,7 @@ namespace Maxst.Passport
         public string token_type;
         [JsonProperty("expires_in")]
         public long expires_in;
+
+        [JsonIgnore] public string BearerAccessToken => string.IsNullOrEmpty(access_token) ? string.Empty : "Bearer " + access_token;
     }
 }

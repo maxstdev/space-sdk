@@ -23,40 +23,40 @@ namespace MaxstXR.Place
 			service = new PublicAPIService(adapter);
 		}
 
-		public async UniTask<Place> GetPlaceFromId(long placeId)
-		{
-			TaskCompletionSource<Place> completionSource = new();
-			service.GetPlaceFromId(placeId)
-				.ObserveOn(Scheduler.MainThread)
-				.Subscribe(data =>
-				{
-					completionSource.TrySetResult(data);
-				},
-				error =>
-				{
-					Debug.LogError(error);
-					completionSource.TrySetException(error);
-					completionSource.SetCanceled();
-				});
-			return await completionSource.Task;
-		}
+		//public async UniTask<SpaceData> GetSpaceFromId(string spaceId)
+		//{
+		//	TaskCompletionSource<SpaceData> completionSource = new();
+		//	service.GetPlaceFromId(spaceId)
+		//		.ObserveOn(Scheduler.MainThread)
+		//		.Subscribe(data =>
+		//		{
+		//			completionSource.TrySetResult(data);
+		//		},
+		//		error =>
+		//		{
+		//			Debug.LogError(error);
+		//			completionSource.TrySetException(error);
+		//			completionSource.SetCanceled();
+		//		});
+		//	return await completionSource.Task;
+		//}
 
-		public async UniTask<List<Spot>> ReqSpotList(long placeId)
-		{
-			TaskCompletionSource<List<Spot>> completionSource = new();
-			service.ReqSpotList(placeId)
-				.ObserveOn(Scheduler.MainThread)
-				.Subscribe(data =>
-				{
-					completionSource.TrySetResult(data);
-				},
-				error =>
-				{
-					Debug.LogError(error);
-					completionSource.TrySetException(error);
-					completionSource.SetCanceled();
-				});
-			return await completionSource.Task;
-		}
+		//public async UniTask<List<Spot>> ReqSpotList(long placeId)
+		//{
+		//	TaskCompletionSource<List<Spot>> completionSource = new();
+		//	service.ReqSpotList(placeId)
+		//		.ObserveOn(Scheduler.MainThread)
+		//		.Subscribe(data =>
+		//		{
+		//			completionSource.TrySetResult(data);
+		//		},
+		//		error =>
+		//		{
+		//			Debug.LogError(error);
+		//			completionSource.TrySetException(error);
+		//			completionSource.SetCanceled();
+		//		});
+		//	return await completionSource.Task;
+		//}
 	}
 }

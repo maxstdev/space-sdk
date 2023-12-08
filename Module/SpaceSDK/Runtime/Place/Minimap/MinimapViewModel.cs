@@ -24,7 +24,8 @@ namespace MaxstXR.Place
 
         public readonly Event<float, float> RenderSize = new Event<float, float>();
         public readonly Event<float, float> VisibleSize = new Event<float, float>();
-        public readonly LiveEvent<Place> PlaceMapLoadComplete = new LiveEvent<Place>();
+        //public readonly LiveEvent<Place> PlaceMapLoadComplete = new LiveEvent<Place>();
+        public readonly LiveEvent<Space> SpaceMapLoadComplete = new LiveEvent<Space>();
 
         protected MinimapViewModel()
         {

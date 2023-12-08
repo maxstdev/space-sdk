@@ -13,6 +13,7 @@ namespace MaxstXR.Place
         public virtual void Config(Place place, UnityAction<Place> placeClickAction = null, bool isRemoveAll = false)
         {
             placeName.text = place?.PlaceName ?? string.Empty;
+            placeName.text += $"({place.PlaceId})";
             if (isRemoveAll) itemButton.onClick.RemoveAllListeners();
             itemButton.onClick.AddListener(() =>
             {

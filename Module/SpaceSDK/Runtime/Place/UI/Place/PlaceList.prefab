@@ -181,7 +181,7 @@ GameObject:
   - component: {fileID: 5748388740595645827}
   - component: {fileID: 5748388740595645824}
   - component: {fileID: 5748388740595645825}
-  - component: {fileID: 4315539465829937070}
+  - component: {fileID: 7386527128888239250}
   m_Layer: 5
   m_Name: PlaceList
   m_TagString: Untagged
@@ -203,7 +203,7 @@ RectTransform:
   m_Children:
   - {fileID: 5748388739209883857}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -278,7 +278,7 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &4315539465829937070
+--- !u!114 &7386527128888239250
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

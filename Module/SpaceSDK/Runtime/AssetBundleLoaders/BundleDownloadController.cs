@@ -20,18 +20,19 @@ namespace MaxstXR.Place
 		}
 
 		[DI(DIScope.component, DIComponent.place)] private BundleDownloadViewModel BundleDownloadViewModel { get; }
+        [DI(DIScope.component, DIComponent.place)] private SceneViewModel SceneViewModel { get; }
 
-		private string label;
-		private long id;
+        private string label;
+		private string id;
 		
-        public long PlaceId { get => id; }
+		public string SpaceId { get => id; }
 
 		private const string STANDALONE_WINDOWS64 = "StandaloneWindows64/";
 		private const string STANDALONE_OSX = "StandaloneOSX/";
 		private const string WEBGL = "WebGL/";
 		private string Platform = STANDALONE_WINDOWS64;
 
-		private Dictionary<DownloadState, UnityAction<Place, Spot>> stateToMethodMap;
+		private Dictionary<DownloadState, UnityAction<string>> stateToMethodMap;
 
 		private DownloadState currentState = DownloadState.Idle;
 		private DownloadState prevState = DownloadState.Idle;
@@ -56,7 +57,7 @@ namespace MaxstXR.Place
 
 		private void Start()
 		{
-			stateToMethodMap = new Dictionary<DownloadState, UnityAction<Place, Spot>>()
+			stateToMethodMap = new Dictionary<DownloadState, UnityAction<string>>()
 			{
 				{ DownloadState.Initialize,  InitializedSystem },
 				{ DownloadState.UpdateCatalog,  UpdateCatalog },
@@ -66,11 +67,11 @@ namespace MaxstXR.Place
 			};
 		}
 
-		public async void StartFetchProcessAsync(Place place, Spot spot)
+		public async void StartFetchProcessAsync(string space)
 		{
 			currentState = prevState = DownloadState.Initialize;
-			label = place.PlaceUniqueName;
-			id = place.PlaceId;
+			label = space;
+			id = space;
 
 			while (currentState != DownloadState.Finished)
 			{
@@ -79,43 +80,42 @@ namespace MaxstXR.Place
 				{
 					continue;
 				}
-				process.Invoke(place, spot);
+				process.Invoke(space);
 			}
 		}
 
-		private void Downloading(Place place, Spot spot)
+		private void Downloading(string space)
 		{
 			//Debug.Log("DonwloadController : Downloading");
-			BundleDownloadViewModel.UpdateDownloadStatus(place, spot);
+			BundleDownloadViewModel.UpdateDownloadStatus(space);
 		}
 
-		private void DownloadStart(Place place, Spot spot)
+		private void DownloadStart(string space)
 		{
 			//Debug.Log("DonwloadController : DownloadStart");
-			BundleDownloadViewModel.StartDownloadAsync(place, spot).Forget();
+			BundleDownloadViewModel.StartDownloadAsync(space).Forget();
 			currentState = DownloadState.Downloading;
 		}
 
-		private void DownloadSizeCheck(Place place, Spot spot)
+		private void DownloadSizeCheck(string space)
 		{
 			//Debug.Log("DonwloadController : DownloadSizeCheck");
 			currentState = DownloadState.Idle;
-			BundleDownloadViewModel.DownloadSizeAsync(place, spot).Forget();
+			BundleDownloadViewModel.DownloadSizeAsync(space).Forget();
 		}
 
-		private void UpdateCatalog(Place place, Spot spot)
+		private void UpdateCatalog(string space)
 		{
 			//Debug.Log("DonwloadController : UpdateCatalog");
 			currentState = DownloadState.Idle;
-			BundleDownloadViewModel.UpdateCatalogAsync(place, spot).Forget();
+			BundleDownloadViewModel.UpdateCatalogAsync(space).Forget();
 		}
 
-		private void InitializedSystem(Place place, Spot spot)
+		private void InitializedSystem(string space)
 		{
-			Debug.Log("DonwloadController : InitializedSystem");
-			
+			//Debug.Log("DonwloadController : InitializedSystem");
 			currentState = DownloadState.Idle;
-            BundleDownloadViewModel.InitializedSystemAsync(place, spot, label).Forget();
+            BundleDownloadViewModel.InitializedSystemAsync(space, label, SceneViewModel.CurrentBundleKey()).Forget();
 		}
 
 		public void GoNextStatus()

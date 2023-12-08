@@ -32,12 +32,11 @@ namespace Maxst.Passport
         private const long DEFAULT_EFFECTIVE_TIME = 300;
         private const long ESTIMATED_EXPIRATION_TIME = 30;
 
-        private const string ClientAccessTokenKey = "Passport_ClientAccessToken";
-
-        private const string IdTokenKey = "Passport_IdToken";
-        private const string AccessTokenKey = "Passport_AccessToken";
-        private const string RefreshTokenKey = "Passport_RefreshToken";
-        private const string RefreshExpiresIn = "Passport_RefreshExpiresIn";
+        public const string ClientAccessTokenKey = "Passport_ClientAccessToken";
+        public const string IdTokenKey = "Passport_IdToken";
+        public const string AccessTokenKey = "Passport_AccessToken";
+        public const string RefreshTokenKey = "Passport_RefreshToken";
+        public const string RefreshExpiresIn = "Passport_RefreshExpiresIn";
 
         private const string GrantType = "refresh_token";
 
@@ -62,7 +61,7 @@ namespace Maxst.Passport
         public ClientType ClientType { get; set; } = ClientType.Public;
         public PassportConfig passportConfig { get; set; }
 
-        [RuntimeInitializeOnLoadMethod]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void TokenRepoOnLoad()
         {
             TokenRepo.Instance.RestoreToken();
@@ -396,7 +395,7 @@ namespace Maxst.Passport
             IObservable<CredentialsToken> ob = null;
 
             var Setting = EnvAdmin.Instance.OpenIDConnectSetting;
-            Setting.TryGetValue(OpenIDConnectSettingKey.GrantType, out var GrantType);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.GrantType, out var GrantType);
 
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ClientID, out var ClientID);
 
@@ -475,7 +474,7 @@ namespace Maxst.Passport
             IObservable<CredentialsToken> ob = null;
 
             var Setting = EnvAdmin.Instance.OpenIDConnectSetting;
-            Setting.TryGetValue(OpenIDConnectSettingKey.GrantType, out var GrantType);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.GrantType, out var GrantType);
 
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ClientID, out var ClientID);
 
@@ -549,6 +548,18 @@ namespace Maxst.Passport
                         {
                             Debug.Log("[FetchToken] FetchToken complte : ");
                         });
+        }
+
+        public void ClearSavedToken()
+        {
+            PlayerPrefs.DeleteKey(ClientAccessTokenKey);
+            PlayerPrefs.DeleteKey(IdTokenKey);
+            PlayerPrefs.DeleteKey(AccessTokenKey);
+            PlayerPrefs.DeleteKey(RefreshTokenKey);
+            PlayerPrefs.DeleteKey(RefreshExpiresIn);
+
+            Config(null);
+            ClientTokenConfig(null);
         }
 
         private void StoreToken(Token token = null)

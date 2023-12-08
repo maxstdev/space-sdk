@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: NetworkManagerSO
   m_EditorClassIdentifier: 
   publicUrl: api.maxverse.io/poi-admin
-  topologyUrl: api.maxverse.io/poi-authoring-tool
+  topologyUrl: api.maxst.com/space
   resourceUrl: api.maxverse.io/asset-integration
   isSecure: 1
   enableLog: 0

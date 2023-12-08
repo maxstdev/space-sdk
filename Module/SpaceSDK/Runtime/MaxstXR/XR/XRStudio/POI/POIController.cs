@@ -7,26 +7,32 @@ using System;
 
 public class POIController : MonoBehaviour
 {
-    public static void GetPOI(MonoBehaviour monoBehaviour, Dictionary<string, string> headers, string applicationKey, int placeId, Action<POIData[]> success, Action fail)
+    static string serverURL = XRAPI.spaceUrl;
+    public static void  GetPOI(MonoBehaviour monoBehaviour, string accessToken, string spaceId, Action<POIData[]> success, Action fail)
     {
-		monoBehaviour.StartCoroutine(APIController.GET(XRAPI.apiURL + "/v1/api/poi/place/" + placeId, headers, 10, (resultString) =>
-		{
-			//Debug.Log(resultString);
-            if (resultString != "")
+        Dictionary<string, string> headers = new Dictionary<string, string>()
+        {
+            { "Authorization", "Bearer " + accessToken},
+            { "Content-Type", "application/json"}
+        };
+
+        monoBehaviour.StartCoroutine(APIController.GET(serverURL + spaceId + "/pois", headers, 10, 
+            (resultString) =>
             {
-                POIData[] pois = JsonReader.Deserialize<POIData[]>(resultString);
-                success(pois);
-                XRAPI.Instance.SendLog(XRAPI.Operation.POI, true);
-            }
-            else
+                //Debug.Log(resultString);
+                if (resultString != "")
+                {
+                    POIData[] pois = JsonReader.Deserialize<POIData[]>(resultString);
+                    success(pois);
+                }
+                else
+                {
+                    fail();
+                }
+            },
+            (error) =>
             {
                 fail();
-                XRAPI.Instance.SendLog(XRAPI.Operation.POI, false);
-            }
-        }, error =>
-        {
-            fail();
-            XRAPI.Instance.SendLog(XRAPI.Operation.POI, false);
-        }));
+            }));
     }
 }

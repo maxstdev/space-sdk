@@ -49,26 +49,26 @@ namespace maxstAR
 			NativeAPI.maxst_TrackerManager_startTracker();
 		}
 
-		public void StartTrackerAtPlace(int placeId)
-		{
-			NativeAPI.maxst_TrackerManager_startTracker();
-			AddTrackerData("{\"vps_placeid\":" + placeId + "}");
-		}
+        public void StartTrackerAtSpace(string spaceId)
+        {
+            NativeAPI.maxst_TrackerManager_startTracker();
+            AddTrackerData("{\"vps_placeid\":" + spaceId + "}");
+        }
 
-		public void SetClientIdClientSecretKeyAndApplicationKey(string clientId, string clientSecretKey, string authorizationURL, string applicationKey)
-		{
-			XRAPI.Instance.SetClientIdClientSecretKeyAndURLAndApplicationKey(clientId, clientSecretKey, authorizationURL, applicationKey);
-			XRAPI.Instance.MakeAccessToken();
-		}
+  //      public void StartTrackerAtPlace(int placeId)
+		//{
+		//	NativeAPI.maxst_TrackerManager_startTracker();
+		//	AddTrackerData("{\"vps_placeid\":" + placeId + "}");
+		//}
 
 		public void SetAccessToken(string token)
 		{
 			NativeAPI.maxst_TrackerManager_setAccessToken(token);
 		}
 
-		public void SetPlaceIdAndSpotId(int placeId, int spotId)
-		{
-			XRAPI.Instance.SetPlaceIdSpotId(placeId, spotId);
+		public void SetSpaceId(string spaceId)
+        {	
+			XRAPI.Instance.SetSpaceId(spaceId);
 		}
 
 		/// <summary>Stop Tracker.</summary>

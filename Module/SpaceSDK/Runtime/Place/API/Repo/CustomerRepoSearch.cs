@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using UnityEngine;
 
 namespace MaxstXR.Place
@@ -57,52 +58,71 @@ namespace MaxstXR.Place
         }
         */
 
-        public Place FindPlaceFromName(string placeUniqeName, List<Place> places)
+        //public Place FindPlaceFromName(string placeUniqeName, List<Place> places)
+        //{
+        //    foreach (var p in places ?? new List<Place>())
+        //    {
+        //        if (placeUniqeName.Equals(p.placeUniqueName,
+        //            StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            return p;
+        //        }
+        //    }
+        //    return null;
+        //}
+
+        //public Spot FindSpotFromName(string vpsSpotName, List<Spot> spots)
+        //{
+        //    foreach (var s in spots ?? new List<Spot>())
+        //    {
+        //        if (vpsSpotName.Equals(s.vpsSpotName,
+        //            StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            return s;
+        //        }
+        //    }
+        //    return null;
+        //}
+
+        private Space FindSpace(string spaceId, List<Space> spaces)
         {
-            foreach (var p in places ?? new List<Place>())
+            if (cacheCategorySpace != null && cacheCategorySpace.spaceId.Equals(spaceId))
             {
-                if (placeUniqeName.Equals(p.placeUniqueName,
-                    StringComparison.OrdinalIgnoreCase))
+                return cacheCategorySpace;
+            }
+
+            foreach (var space in spaces ?? new List<Space>())
+            {
+                if (space.spaceId.Equals(spaceId))
                 {
-                    return p;
+                    cacheCategorySpace = space;
+                    return space;
                 }
             }
+
             return null;
         }
 
-        public Spot FindSpotFromName(string vpsSpotName, List<Spot> spots)
-        {
-            foreach (var s in spots ?? new List<Spot>())
-            {
-                if (vpsSpotName.Equals(s.vpsSpotName,
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    return s;
-                }
-            }
-            return null;
-        }
+        //private Place FindPlace(string placeId, List<Place> places)
+        //{
+        //    if (int.TryParse(placeId, out int pid))
+        //    {
+        //        if (cacheCategoryPlace != null && cacheCategoryPlace.placeId == pid)
+        //        {
+        //            return cacheCategoryPlace;
+        //        }
 
-        private Place FindPlace(string placeId, List<Place> places)
-        {
-            if (int.TryParse(placeId, out int pid))
-            {
-                if (cacheCategoryPlace != null && cacheCategoryPlace.placeId == pid)
-                {
-                    return cacheCategoryPlace;
-                }
-
-                foreach (var place in places ?? new List<Place>())
-                {
-                    if (place.placeId == pid)
-                    {
-                        cacheCategoryPlace = place;
-                        return place;
-                    }
-                }
-            }
-            return null;
-        }
+        //        foreach (var place in places ?? new List<Place>())
+        //        {
+        //            if (place.placeId == pid)
+        //            {
+        //                cacheCategoryPlace = place;
+        //                return place;
+        //            }
+        //        }
+        //    }
+        //    return null;
+        //}
 
         private Spot FindSpot(string spotId, List<Spot> spots)
         {

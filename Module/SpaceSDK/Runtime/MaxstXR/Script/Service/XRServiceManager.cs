@@ -6,10 +6,8 @@ using MaxstUtils;
 using MaxstXR.Extension;
 using MaxstXR.Place;
 using System;
-using System.Collections.Generic;
 using UniRx;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using static maxstAR.XRAPI;
 
 public class XRServiceManager : InSceneUniqueBehaviour
@@ -17,21 +15,13 @@ public class XRServiceManager : InSceneUniqueBehaviour
     public static XRServiceManager Instance(GameObject go) => Instance<XRServiceManager>(go);
 
     [HideInInspector]
-    public int spotId = -1;
-    [HideInInspector]
-    public int placeId = -1;
+    public string spaceId = "";
 
-    public SpotData spotData;
-    public PlaceData placeData;
-
-    private static string accessToken => TokenRepo.Instance.GetClientToken()?.access_token;
-    public static string authorization => string.IsNullOrEmpty(accessToken) ? "" : "Bearer " + accessToken;
-    public static string contentType => "application/json";
-    
     private string vrStoragePath = "";
 
     protected override void Awake()
     {
+        base.Awake();
         InitPlaceSpot();
     }
 
@@ -44,26 +34,27 @@ public class XRServiceManager : InSceneUniqueBehaviour
         GameObject trackable = povManager.Trackable;
         VPSTrackable vPSTrackable = trackable?.GetComponent<VPSTrackable>();
         if (vPSTrackable == null) return;
-        this.spotId = vPSTrackable.spotId;
-        this.placeId = vPSTrackable.placeId;
-        SetPlaceIdSpotId(this.placeId, this.spotId);
+        SetPlaceIdSpotId();
     }
 
-    public async void SetPlaceIdSpotId(int placeId, int spotId)
+    public async void SetPlaceIdSpotId()
     {
-        if (string.IsNullOrEmpty(accessToken))
-        {
-            await FetchClientToken();
-        }
+        await SetAccessToken();
+        //await SetXRPlaceData(placeId);
+        //await SetXRSpotData(spotId);
 
-        await SetXRPlaceData(placeId);
-        await SetXRSpotData(spotId);
+
+        TextureManager.TexturesDirectory = GetVRImagePath();
+        SmoothTextureManager.TexturesDirectory = GetVRImagePath();
     }
+
+#if false
     private async UniTask SetXRPlaceData(int placeId)
     {
+        var authorization = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig);
         var ob = XRService.Instance.GetPlaceData(
                 authorization,
-                contentType,
+                XRTokenManager.Instance.contentType,
                 placeId.ToString()
             );
 
@@ -92,11 +83,13 @@ public class XRServiceManager : InSceneUniqueBehaviour
         await ob;
     }
 
+
     private async UniTask SetXRSpotData(int spotId)
     {
+        var authorization = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig);
         var ob = XRService.Instance.GetSpotData(
             authorization,
-            contentType,
+            XRTokenManager.Instance.contentType,
             spotId.ToString()
             );
 
@@ -127,7 +120,9 @@ public class XRServiceManager : InSceneUniqueBehaviour
 
         await ob;
     }
+#endif
 
+#if false
     public void AddDeviceInformation()
     {
         string deviceUUID = PlayerPrefs.GetString("device_uuid", "");
@@ -144,13 +139,10 @@ public class XRServiceManager : InSceneUniqueBehaviour
         TrackerManager.GetInstance().AddTrackerData("{\"vps_log\":1,\"device_uuid\":\"" + deviceUUID + "\",\"identifier\":\"" + identifier + "\",\"product_name\":\"" + productName + "\",\"place_unique_name\":\"" + place_unique_name + "\",\"vps_spot_name\":\"" + vps_spot_name + "\"}");
     }
 
-     public async void SendLog(Operation operation, bool success)
-     {
-        if (string.IsNullOrEmpty(accessToken))
-        {
-            await FetchClientToken();
-        }
 
+    public async void SendLog(Operation operation, bool success)
+     {
+         await SetAccessToken();
         XRType xRType = XRType.AR;
         if (!XRStudioController.Instance.ARMode)
         {
@@ -205,7 +197,7 @@ public class XRServiceManager : InSceneUniqueBehaviour
         {
             aid = "WebGL";
         }
-
+        var authorization = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig);
         var ob = XRService.Instance.GetLog(
             authorization: authorization,
             aid: aid,
@@ -240,6 +232,7 @@ public class XRServiceManager : InSceneUniqueBehaviour
 
         await ob;
     }
+#endif
 
     public string GetVRImagePath()
     {
@@ -257,37 +250,15 @@ public class XRServiceManager : InSceneUniqueBehaviour
 
     public async UniTask RefreshToken(Action complete = null)
     {
-        await FetchClientToken();
+        await SetAccessToken();
 
         complete?.Invoke();
     }
 
-    public Dictionary<string, string> GetHeaders()
+    private async UniTask SetAccessToken()
     {
-        return new Dictionary<string, string>()
-            {
-                { "Authorization",  authorization },
-                { "Content-Type", contentType },
-            };
-    }
-
-    private async UniTask FetchClientToken()
-    {
-        var auth = TokenRepo.Instance.passportConfig;
-
-        await TokenRepo.Instance.GetPassportClientToken(
-            auth.ApplicationId,
-            auth.ApplicationKey,
-            auth.GrantType,
-            null,
-            null,
-            false
-        );
-
-        var token = TokenRepo.Instance.GetClientToken();
-        var xAppkey = auth.ApplicationKey;
-        
-        TrackerManager.GetInstance().SetAccessToken(token.access_token);
+        var token = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig);
+        TrackerManager.GetInstance().SetAccessToken(token);
     }
 
     public void Clear()

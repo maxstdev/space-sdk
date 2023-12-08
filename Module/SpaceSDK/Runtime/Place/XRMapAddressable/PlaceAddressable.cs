@@ -9,14 +9,14 @@ namespace MaxstXR.Place
 {
     public static class PlaceAddressable
     {
-        private static Dictionary<string, AsyncOperationHandle<IList<IResourceLocation>>> loadedAssets = new Dictionary<string, AsyncOperationHandle<IList<IResourceLocation>>>();
+        private static Dictionary<string, AsyncOperationHandle> loadedAssets = new Dictionary<string, AsyncOperationHandle>();
 
-        public static void LoadPov(PlaceScriptableObjects spot, GameObject XRStudio)
+        public static void LoadPov(PlaceScriptableObjects space, GameObject XRStudio)
         {
             XRStudio.transform.DestroyAllChildren();
-            if (spot)
+            if (space)
             {
-                foreach (var t in spot.IteratorPov())
+                foreach (var t in space.IteratorPov())
                 {
                     var go = GameObject.Instantiate(t, XRStudio.transform);
                     go.name = t.name;
@@ -24,12 +24,12 @@ namespace MaxstXR.Place
             }
         }
 
-        public static void LoadMap(PlaceScriptableObjects spot, GameObject TrackableRoot)
+        public static void LoadMap(PlaceScriptableObjects space, GameObject TrackableRoot)
         {
             TrackableRoot.transform.DestroyAllChildren();
-            if (spot)
+            if (space)
             {
-                foreach (var t in spot.IteratorTrackable())
+                foreach (var t in space.IteratorTrackable())
                 {
                     var go = GameObject.Instantiate(t, TrackableRoot.transform);
                     go.name = t.name;
@@ -44,52 +44,37 @@ namespace MaxstXR.Place
 
         public static async UniTask<T> LoadAssetFromAddressableAsync<T>(string assetKey)
         {
-            if (loadedAssets != null && loadedAssets.Keys.Count > 0)
+            if (loadedAssets.ContainsKey(assetKey))
             {
-                loadedAssets.Clear();
+                UnloadAllAssets();
             }
 
-            //var locations = await Addressables.LoadResourceLocationsAsync(assetKey);
-            
-            var locations = Addressables.LoadResourceLocationsAsync(assetKey);
+            var handler = Addressables.LoadAssetAsync<T>(assetKey);
+            await handler.Task;
 
-            await locations.Task;
-
-            //if (locations != null)
+            if (handler.Result != null)
             {
-                loadedAssets.Add(assetKey, locations);
+                loadedAssets.Add(assetKey, handler);
             }
 
-            foreach (var location in locations.Result)
-            {
-                if (location.ResourceType == typeof(T))
-                {
-                    var handler = await Addressables.LoadAssetAsync<T>(location);
-
-                    return handler;
-                }
-            }
-            return default(T);
+            return handler.Result;
         }
 
-        public static void UnloadAsset()
+        public static void UnloadAsset(string assetKey)
         {
-            Debug.Log($"UnloadAddressable, Asset : {loadedAssets.Keys.Count}");
-
-            //AssetBundle.UnloadAllAssetBundles(true);
-            Resources.UnloadUnusedAssets();
-
-            if (loadedAssets.Keys.Count > 0)
+            if (loadedAssets.ContainsKey(assetKey))
             {
-                foreach (var assetKey in loadedAssets.Keys)
-                {
-                    var loaded = loadedAssets[assetKey];
-
-                    Debug.Log($"====== loaded release : {assetKey}");
-                    Addressables.Release(loaded);
-                }
+                Addressables.Release(loadedAssets[assetKey]);
+                loadedAssets.Remove(assetKey);
             }
+        }
 
+        public static void UnloadAllAssets()
+        {
+            foreach (var handle in loadedAssets.Values)
+            {
+                Addressables.Release(handle);
+            }
             loadedAssets.Clear();
         }
     }

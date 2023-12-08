@@ -4,10 +4,11 @@ using UnityEngine;
 
 namespace Maxst.Settings
 {
-
-    [CreateAssetMenu(fileName = "EnvUrlSetting", menuName = "Packages/Scriptable Dictionary/EnvUrlSetting", order = 1000)]
-    public class EnvUrlSetting : ScriptableSingleton<EnvUrlSetting>
+    public class EnvUrlSetting
     {
-        [SerializeField] public List<EnvSetting> EnvSettings;
+        public static Dictionary<DomainType, EnvSetting> Domains { get; } = new Dictionary<DomainType, EnvSetting>()
+        {
+            { DomainType.maxst,  new EnvSettingFromMaxst() }
+        };
     }
 }

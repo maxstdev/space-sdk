@@ -21,7 +21,7 @@ namespace MaxstXR.Place
 
         private void Start()
         {
-            XrSettings.NavigationLocation.ObserveOnMainThread().Subscribe(OnChangedNavigationLocation).AddTo(this);
+            //XrSettings.NavigationLocation.ObserveOnMainThread().Subscribe(OnChangedNavigationLocation).AddTo(this);
             XrSettings.SpotController.ObserveOnMainThread().Subscribe(OnChangedSpotController).AddTo(this);
             dynamicSceneManager = FindObjectOfType<DynamicSceneManager>();
         }
@@ -51,9 +51,11 @@ namespace MaxstXR.Place
         {
             if (CustomerRepo.CachePoIList.IsEmpty())
             {
-                await SceneViewModel.GetCategoryAsync(DynamicSceneView.Instance(gameObject));
-                await SceneViewModel.GetPoIAsync(DynamicSceneView.Instance(gameObject),
-                    SceneViewModel.CurrentPlace, CustomerRepo.CacheSpotList);
+                //await SceneViewModel.GetCategoryAsync(DynamicSceneView.Instance(gameObject));
+
+                //await SceneViewModel.GetPoIAsync(DynamicSceneView.Instance(gameObject),
+                //    SceneViewModel.CurrentPlace, CustomerRepo.CacheSpotList);
+                await SceneViewModel.GetSpacePoiAsync();
             }
             Load(CustomerRepo.CachePoIList, currentLocation, removeLocations);
         }

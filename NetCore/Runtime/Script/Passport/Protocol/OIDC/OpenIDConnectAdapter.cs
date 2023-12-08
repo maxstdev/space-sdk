@@ -55,8 +55,15 @@ namespace Maxst.Passport
         
         private static OpenIDConnectAdapter instance;
 
+
 #if UNITY_EDITOR || UNITY_STANDALONE
         private MaxstOpenIDConnectService OpenIDConnectService;
+
+        private string locationUrl = null;
+
+        public void SetLocationUrl(string url) {
+            locationUrl = url;
+        }
 #endif
         private OpenIDConnectAdapter() { }
 
@@ -129,16 +136,18 @@ namespace Maxst.Passport
 
         private void OnConfidentialLogin()
         {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.AndroidRedirectUri, out var RedirectURI);
             Application.OpenURL(GetConfidentialLoginURL(RedirectURI));
-#elif UNITY_IOS
+#elif UNITY_IOS && !UNITY_EDITOR
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.iOSRedirectUri, out var RedirectURI);
             Application.OpenURL(GetConfidentialLoginURL(RedirectURI));
-#else
+#elif UNITY_EDITOR || UNITY_STANDALONE
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.WebRedirectUri, out var RedirectURI);
-            ServiceManager.Instance.InstGetService<MaxstOpenIDConnectService>().OpenLoginPageAsync();
-#endif        
+            OpenLoginPageAsync();
+#else 
+            Debug.Log("This platform is not supported OnConfidentialLogin");
+#endif     
         }
 
         public void ShowOIDCProtocolLoginPage(string CodeVerifier, string CodeChallenge)
@@ -148,18 +157,26 @@ namespace Maxst.Passport
 
         private void OnPublicLogin(string CodeVerifier, string CodeChallenge)
         {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.AndroidRedirectUri, out var RedirectURI);
             Application.OpenURL(GetURL(RedirectURI, CodeVerifier, CodeChallenge));
-#elif UNITY_IOS
+#elif UNITY_IOS && !UNITY_EDITOR
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.iOSRedirectUri, out var RedirectURI);
             Application.OpenURL(GetURL(RedirectURI, CodeVerifier, CodeChallenge));
-#else
+#elif UNITY_EDITOR || UNITY_STANDALONE
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.WebRedirectUri, out var RedirectURI);
-            ServiceManager.Instance.InstGetService<MaxstOpenIDConnectService>().OpenLoginPageAsync();
+            OpenLoginPageAsync();
+#else 
+            Debug.Log("This platform is not supported OnPublicLogin");
 #endif
         }
 
+#if UNITY_EDITOR || UNITY_STANDALONE
+        private async void OpenLoginPageAsync() {
+            var location = locationUrl == null ? EnvAdmin.Instance.AuthUrlSetting.Urls[URLType.Location] : locationUrl;
+            await ServiceManager.Instance.InstGetService<MaxstOpenIDConnectService>().OpenLoginPageAsync(location);
+        }
+#endif
         public void OpenUrlLoginPage(PassportConfig config)
         {
             switch (config.clientType)
@@ -188,7 +205,7 @@ namespace Maxst.Passport
             OpenIDConnectArguments.SetValue(OpenIDConnectArgument.WebRedirectUri, RedirectURI);
 # endif
             var Setting = EnvAdmin.Instance.OpenIDConnectSetting;
-            Setting.TryGetValue(OpenIDConnectSettingKey.ConfidentialLoginUrl, out var LoginUrl);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.ConfidentialLoginUrl, out var LoginUrl);
 
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ClientID, out var ClientID);
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ClientSecret, out var ClientSecret);
@@ -196,9 +213,9 @@ namespace Maxst.Passport
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ResponseType, out var ResponseType);
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.Scope, out var Scope);
 
-            Setting.TryGetValue(OpenIDConnectSettingKey.LoginAPI, out var LoginAPI);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.LoginAPI, out var LoginAPI);
 
-            var Host = EnvAdmin.Instance.AuthUrlSetting[URLType.API];
+            var Host = EnvAdmin.Instance.AuthUrlSetting.Urls[URLType.API];
 
             var URL = string.Format(LoginUrl, Host, LoginAPI, ClientID, ResponseType, Scope, RedirectURI, ClientSecret);
 
@@ -213,9 +230,9 @@ namespace Maxst.Passport
             OpenIDConnectArguments.SetValue(OpenIDConnectArgument.WebRedirectUri, RedirectURI);
 # endif
             var Setting = EnvAdmin.Instance.OpenIDConnectSetting;
-            Setting.TryGetValue(OpenIDConnectSettingKey.PublicLoginUrl, out var LoginUrl);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.PublicLoginUrl, out var LoginUrl);
 
-            Setting.TryGetValue(OpenIDConnectSettingKey.LoginAPI, out var LoginAPI);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.LoginAPI, out var LoginAPI);
             
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ClientID, out var ClientID);
             OpenIDConnectArguments.TryGetValue(OpenIDConnectArgument.ResponseType, out var ResponseType);
@@ -223,9 +240,9 @@ namespace Maxst.Passport
 
             this.CodeVerifier = CodeVerifier;
 
-            Setting.TryGetValue(OpenIDConnectSettingKey.CodeChallengeMethod, out var CodeChallengeMethod);
+            Setting.Urls.TryGetValue(OpenIDConnectSettingKey.CodeChallengeMethod, out var CodeChallengeMethod);
 
-            var Host = EnvAdmin.Instance.AuthUrlSetting[URLType.API];
+            var Host = EnvAdmin.Instance.AuthUrlSetting.Urls[URLType.API];
 
             var URL = string.Format(LoginUrl, Host, LoginAPI, ClientID, ResponseType, Scope, RedirectURI, CodeChallenge, CodeChallengeMethod);
 
@@ -233,6 +250,7 @@ namespace Maxst.Passport
 
             return URL;
         }
+
         public void OnClientToken(PassportConfig config, Action<TokenStatus, ClientToken> success = null,
             Action<ErrorCode, Exception> fail = null)
         {
@@ -267,9 +285,6 @@ namespace Maxst.Passport
             string Query = url.Split("?"[0])[1];
 
             var AuthorizationDictionary = Query.Replace("?", "").Split('&').ToDictionary(x => x.Split('=')[0], x => x.Split('=')[1]);
-
-            var state = AuthorizationDictionary["state"];
-            var session_state = AuthorizationDictionary["session_state"];
             var code = AuthorizationDictionary["code"];
 
             foreach (var each in AuthorizationDictionary)

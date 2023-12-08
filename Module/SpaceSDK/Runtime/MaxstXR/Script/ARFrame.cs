@@ -164,30 +164,7 @@ namespace maxstAR
 			Vector3 position = MatrixUtils.PositionFromMatrix(convertedMatrix);
 			convertedMatrix = Matrix4x4.TRS(new Vector3(position.x, position.y, -position.z), rotation, new Vector3(1, 1, 1));
 
-
 			return convertedMatrix;
-			//float[] pose = new float[16];
-			//NativeAPI.maxst_ARFrame_getTransform(arFrameCPtr, pose);
-			//Matrix4x4 targetPose = MatrixUtils.GetUnityPoseMatrix(pose);
-
-			//targetPose = targetPose.inverse;
-
-			//Matrix4x4 convertedMatrix = targetPose;
-
-			//if (convertedMatrix == Matrix4x4.zero)
-			//	return Matrix4x4.zero;
-
-
-			//Quaternion rotation = Quaternion.Euler(90, 0, 0);
-			//Matrix4x4 m = Matrix4x4.TRS(new Vector3(0, 0, 0), rotation, new Vector3(1, 1, 1));
-			//convertedMatrix = m * convertedMatrix;
-
-			//Vector3 convertPosition = MatrixUtils.PositionFromMatrix(convertedMatrix);
-			//Quaternion convertRotation = MatrixUtils.QuaternionFromMatrix(convertedMatrix);
-			//Quaternion rotation2 = Quaternion.Euler(180, 0, 0) * convertRotation;
-			//Matrix4x4 m1 = Matrix4x4.TRS(new Vector3(convertPosition.x, -convertPosition.y, -convertPosition.z), rotation2, new Vector3(1, 1, 1));
-
-			//return m1;
 		}
 
 		public float[] GetVPSWorldTransform()
@@ -195,6 +172,22 @@ namespace maxstAR
 			float[] pose = new float[16];
 			NativeAPI.maxst_ARFrame_getVPSWorldTransform(arFrameCPtr, pose);
 			return pose;
+		}
+
+		public Matrix4x4 GetVPSWorldTransformOriginalMatrix()
+		{
+			float[] pose = new float[16];
+			NativeAPI.maxst_ARFrame_getVPSWorldTransform(arFrameCPtr, pose);
+			Matrix4x4 targetPose = MatrixUtils.ConvertGLMatrixToUnityMatrix4x4(pose);
+			return targetPose;
+		}
+
+		public Matrix4x4 GetOriginalForVPSTransformMatrix()
+		{
+			float[] pose = new float[16];
+			NativeAPI.maxst_ARFrame_getOriginalForVPSTransform(arFrameCPtr, pose);
+			Matrix4x4 targetPose = MatrixUtils.ConvertGLMatrixToUnityMatrix4x4(pose);
+			return targetPose;
 		}
 
 		public float[] GetOriginalForVPSTransform()

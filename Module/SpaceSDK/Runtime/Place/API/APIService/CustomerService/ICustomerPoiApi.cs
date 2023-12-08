@@ -6,23 +6,23 @@ using System.Collections.Generic;
 
 namespace MaxstXR.Place
 {
-    public static class ApiConst
-	{
-		public const string Authorization = "Authorization";
-	}
+ //   public static class ApiConst
+	//{
+	//	public const string Authorization = "Authorization";
+	//}
 
     public interface ICustomerPoiApi
 	{
-		[Get("/v1/api/place/list")]
+        [Get("/v1/api/place/list")]
         IObservable<List<Place>> ReqPlaceList(
             [Header(ApiConst.Authorization)] string accessToken
             );
 
-		[Get("/v1/api/place/list/all")]
-		IObservable<List<Place>> ReqPlaceListAll(
-			[Header(ApiConst.Authorization)] string accessToken);
+        [Get("/v1/api/place/list/all")]
+        IObservable<List<Place>> ReqPlaceListAll(
+            [Header(ApiConst.Authorization)] string accessToken);
 
-		[Get("/v1/api/place/{place_id}")]
+        [Get("/v1/api/place/{place_id}")]
         IObservable<PlaceDetail> ReqPlaceDetail(
 			[Header(ApiConst.Authorization)] string accessToken,
 			[Path("place_id")] long placeId);

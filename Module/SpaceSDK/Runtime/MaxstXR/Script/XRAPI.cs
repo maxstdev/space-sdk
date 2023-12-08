@@ -10,38 +10,19 @@ namespace maxstAR
     public class XRAPI : MaxstSingleton<XRAPI>
     {
         [HideInInspector]
-        public int spotId = -1;
-        [HideInInspector]
-        public int placeId = -1;
+        public string spaceId = "";
 
-        public string authorizationURL = ""; //default https:/api.maxst.com/passport/token
-
-        public string applicationId = "";
-        public string applicationKey = "";
-        public string grantType = "";
-
+        private SpaceData spaceData = null;
         private bool debugMode = false;
         private string debugTexturePath = "";
-
-        private string accessToken = "";
-        private string vrStoragePath = "";
-        private long expiresTime = 0;
-
-        public SpotData spotData;
-        public PlaceData placeData;
-
-        public const string domain = "https://api.maxverse.io";
-        public const string apiURL = domain + "/poi-customer";
-        public const string naviURL = domain + "/vps";
-        public const string logServerURL = apiURL + "/v1/api/logs";
-        public const string placeUrl = apiURL + "/v1/api/place/";
-        public const string spotUrl = apiURL + "/v1/api/spot/";
-        public const string newImageDownloadUrl = apiURL + "/v1/spot/textured-file";
-        public string imagePolicy = "";
+        public string accessToken = "";
+        public const string domain = "https://api.maxst.com/space";
+        public const string domain2 = "https://api.maxst.com/vps";
+        public const string naviURL = domain2 + "/v1/path";
+        public const string spaceUrl = domain + "/v1/space/";
+        public const string newImageDownloadUrl = domain + "/v1/space/";
+        private string imagePolicy = "";
         private DateTime imagePolicyExpireTime = DateTime.MinValue;
-
-        private bool isGettingAccessToken = false;
-        private bool isGettingDatas = false;
 
 
         public enum Operation
@@ -65,232 +46,65 @@ namespace maxstAR
         public void Clear()
         {
             this.accessToken = "";
-            this.vrStoragePath = "";
-            this.placeId = -1;
-            this.spotId = -1;
+            this.spaceId = "";
         }
 
         public void Start()
         {
-            if (this.accessToken == "" || this.spotId == -1 || this.placeId == -1)
-            {
-                PovManager povManager = GetComponentInChildren<PovManager>(true);
-                GameObject trackable = povManager.Trackable;
-                VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
-                this.spotId = vPSTrackable.spotId;
-                this.placeId = vPSTrackable.placeId;
-
-                SetPlaceIdSpotId(this.placeId, this.spotId);
-                SetClientIdClientSecretKeyAndURLAndApplicationKey(this.applicationId, this.applicationKey, this.authorizationURL, this.grantType);
-            }
-            else
-            {
-                TrackerManager.GetInstance().SetAccessToken(this.accessToken);
-            }
+            PovManager povManager = GetComponentInChildren<PovManager>(true);
+            GameObject trackable = povManager.Trackable;
+            VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
+            this.spaceId = vPSTrackable.spaceId;
+            TrackerManager.GetInstance().SetAccessToken(this.accessToken);
+            SetSpaceId(this.spaceId);
         }
 
-        public void SetPlaceIdSpotId(int placeId, int spotId)
+        public void SetSpaceId(string spaceId)
         {
-            TrackerManager.GetInstance().AddTrackerData("{\"vps_placeid\":" + XRAPI.Instance.placeId + "}");
-            this.accessToken = "";
-            this.vrStoragePath = "";
-            this.placeId = placeId;
-            this.spotId = spotId;
+            TrackerManager.GetInstance().AddTrackerData("{\"vps_spaceid\":\"" + XRAPI.Instance.spaceId + "\"}");
+            this.spaceId = spaceId;
 
             if(debugMode)
             {
                 return;
             }
 
-            StartCoroutine(ExecuteCoroutine(execution: () => {
-      
-                var headers = GetHeaders();
-                StartCoroutine(APIController.GET(placeUrl + placeId, headers, null, 10, (resultString) =>
-                {
-                    Debug.Log(resultString);
-                    if (resultString != "")
-                    {
-                        this.placeData = JsonReader.Deserialize<PlaceData>(resultString);
-
-                        if(this.spotData != null)
-                        {
-                            AddDeviceInformation();
-                        }
-                    }
-                }, (failString)=> { }));
-
-                StartCoroutine(APIController.GET(spotUrl + spotId, headers, null, 10, (resultString) =>
-                {
-                    Debug.Log(resultString);
-                    if (resultString != "")
-                    {
-                        this.spotData = JsonReader.Deserialize<SpotData>(resultString);
-                        vrStoragePath = this.spotData.spot_directory;
-                        if (this.placeData != null)
-                        {
-                            AddDeviceInformation();
-                        }
-
-                    }
-                }, (failString) => { }));
-
-                //Debug.Log($"newImageDownloadUrl : {newImageDownloadUrl}");
-                Dictionary<string, string> vrImageParameter = new Dictionary<string, string>
-                {
-                    { "spot_id", "" + spotId }
-                };
-                StartCoroutine(APIController.GET(newImageDownloadUrl, headers, vrImageParameter, 10, (resultString) =>
-                {
-                    //Debug.Log($"newImageDownloadUrl resultString : {resultString}");
-                    if (resultString != "")
-                    {
-                        imagePolicy = resultString;
-                        imagePolicyExpireTime = DateTime.Now;
-                        TextureManager.TexturesDirectory = imagePolicy;
-                    }
-                }, (failString) => { }));
-
-            }));
-        }
-
-        private void AddDeviceInformation()
-        {
-            string deviceUUID = PlayerPrefs.GetString("device_uuid", "");
-            if (deviceUUID.Equals(""))
+            if (this.accessToken == "")
             {
-                deviceUUID = SystemInfo.deviceUniqueIdentifier;
-                PlayerPrefs.SetString("device_uuid", deviceUUID);
+                Debug.LogError("No AccessToken");
             }
 
-            string identifier = Application.identifier;
-            string productName = Application.productName;
-            string place_unique_name = this.placeData.place_unique_name;
-            string vps_spot_name = this.spotData.vps_spot_name;
-            TrackerManager.GetInstance().AddTrackerData("{\"vps_log\":1,\"device_uuid\":\"" + deviceUUID + "\",\"identifier\":\"" + identifier + "\",\"product_name\":\"" + productName + "\",\"place_unique_name\":\"" + place_unique_name + "\",\"vps_spot_name\":\"" + vps_spot_name + "\"}");
-        }
-
-        private IEnumerator ExecuteCoroutine(System.Action  execution)
-        {
-            bool loop = true;
-            while (loop)
+            var headers = GetHeaders();
+            StartCoroutine(APIController.GET(spaceUrl + spaceId + "/public", headers, null, 10, (resultString) =>
             {
-                if (!this.accessToken.Equals(""))
+                //Debug.Log(resultString);
+                if (resultString != "")
                 {
-                    loop = false;
-                    break;
+                    this.spaceData = JsonReader.Deserialize<SpaceData>(resultString);
                 }
+            }, (failString) => { }));
 
-                MakeAccessToken();
 
-                yield return new WaitForSeconds(0.2f);
-                if (!accessToken.Equals(""))
+            StartCoroutine(APIController.GET(newImageDownloadUrl + spaceId + "/texture" , headers, null, 10, (resultString) =>
+            {
+                //Debug.Log($"newImageDownloadUrl resultString : {resultString}");
+                if (resultString != "")
                 {
-                    loop = false;
-                    break;
+                    VRImagePolicyData vrImagePolicyData = JsonReader.Deserialize<VRImagePolicyData>(resultString);
+                    imagePolicy = vrImagePolicyData.pre_signed_url;
+                    imagePolicyExpireTime = DateTime.Now;
+                    TextureManager.TexturesDirectory = imagePolicy;
                 }
-            }
-            //yield return new WaitForSeconds(0.1f);
-            execution();
+            }, (failString) => { }));
         }
-
-        public void SendLog(Operation operation, bool success)
-        {
-            StartCoroutine(ExecuteCoroutine(execution: () => {
-                XRType xRType = XRType.AR;
-                if(!XRStudioController.Instance.ARMode)
-                {
-                    xRType = XRType.XR;
-                }
-                SendLog(this.accessToken, xRType, operation, placeData.place_unique_name, spotData.vps_spot_name, success);
-            }));
-        }
-
-        public void SendLog(string accessToken, XRType xRType, Operation operation, string place, string spot, bool success)
-        {
-            string deviceUUID = PlayerPrefs.GetString("device_uuid", "");
-            if(deviceUUID.Equals(""))
-            {
-                deviceUUID = System.Guid.NewGuid().ToString();
-                PlayerPrefs.SetString("device_uuid", deviceUUID);
-            }
-
-            string operationUUID = System.Guid.NewGuid().ToString();
-            string platform = "";
-            if(Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor)
-            {
-                platform = "MacOS";
-            }
-            else if(Application.platform == RuntimePlatform.IPhonePlayer)
-            {
-                platform = "iOS";
-            }
-            else if (Application.platform == RuntimePlatform.Android)
-            {
-                platform = "Android";
-            }
-            else if (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor)
-            {
-                platform = "Windows";
-            }
-            else if (Application.platform == RuntimePlatform.WebGLPlayer)
-            {
-                platform = "WebGL";
-            }
-
-            string tempAccessToken = accessToken;
-
-
-            Dictionary<string, string> headers = new Dictionary<string, string>()
-            {
-                { "Authorization", "Bearer " + tempAccessToken}
-            };
-
-            int successInt = 0;
-            if(success)
-            {
-                successInt = 1;
-            }
-
-            string versoin = "0.12.1";
-            string aid = Application.identifier;
-
-            if(Application.platform == RuntimePlatform.WebGLPlayer)
-            {
-                aid = "WebGL";
-            }
-#if false
-            Dictionary<string, string> parameters = new Dictionary<string, string>()
-            {
-                { "aid", aid},
-                { "aname",Application.productName },
-                { "env", "dev" },
-                { "mcc", xRType.ToString() },
-                { "mpn", this.placeData.place_unique_name },
-                { "msn", this.spotData.vps_spot_name },
-                { "oid", operationUUID },
-                { "on", operation.ToString() },
-                { "pn",  platform },
-                { "sid", "MAXVERSE" },
-                { "success", successInt.ToString() },
-                { "sv", versoin },
-                { "uid", deviceUUID }
-            };
-
-            StartCoroutine(APIController.GET(logServerURL, headers, parameters, 10, (resultString) =>
-            {
-                Debug.Log("Send Log Success");
-            }, (failString) => { Debug.Log("Send Log fail"); }));
-#endif
-        }
-
 
         public IEnumerator GetVRImagePathCoroutine(System.Action<string> result)
         {
-            string vrImageURL = newImageDownloadUrl + vrStoragePath + "/textured/";
+            string vrImageURL = newImageDownloadUrl + spaceId + "/texture";
 
             if (this.accessToken == "")
             {
-                MakeAccessToken();
+                Debug.LogError("No AccessToken");
             }
 
             if (debugTexturePath != "")
@@ -306,20 +120,16 @@ namespace maxstAR
                 PovManager povManager = GetComponentInChildren<PovManager>(true);
                 GameObject trackable = povManager.Trackable;
                 VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
-                this.spotId = vPSTrackable.spotId;
-                this.placeId = vPSTrackable.placeId;
+                this.spaceId = vPSTrackable.spaceId;
 
                 var headers = GetHeaders();
-                Dictionary<string, string> vrImageParameter = new Dictionary<string, string>
+                yield return StartCoroutine(APIController.GET(newImageDownloadUrl + spaceId + "/texture", headers, null, 10, (resultString) =>
                 {
-                    { "spot_id", "" + spotId }
-                };
-                yield return StartCoroutine(APIController.GET(newImageDownloadUrl, headers, vrImageParameter, 10, (resultString) =>
-                {
-                    Debug.Log(resultString);
+                    //Debug.Log(resultString);
                     if (resultString != "")
                     {
-                        imagePolicy = resultString;
+                        VRImagePolicyData vrImagePolicyData = JsonReader.Deserialize<VRImagePolicyData>(resultString);
+                        imagePolicy = vrImagePolicyData.pre_signed_url;
                         imagePolicyExpireTime = DateTime.Now;
                     }
                 }, (failString) => { }));
@@ -335,11 +145,11 @@ namespace maxstAR
 
         public async Task<string> GetVRImagePathAsync()
         {
-            string vrImageURL = newImageDownloadUrl + vrStoragePath + "/textured/";
+            string vrImageURL = newImageDownloadUrl + spaceId + "/texture";
 
             if (this.accessToken == "")
             {
-                await MakeAccessTokenAsync();
+                Debug.LogError("No AccessToken");
             }
 
             if (debugTexturePath != "")
@@ -354,23 +164,19 @@ namespace maxstAR
                 PovManager povManager = GetComponentInChildren<PovManager>(true);
                 GameObject trackable = povManager.Trackable;
                 VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
-                this.spotId = vPSTrackable.spotId;
-                this.placeId = vPSTrackable.placeId;
+                this.spaceId = vPSTrackable.spaceId;
 
                 if(this.accessToken == "") {
-                    await MakeAccessTokenAsync();
+                    Debug.LogError("No AccessToken");
                 }
 
                 var headers = GetHeaders();
-                Dictionary<string, string> vrImageParameter = new Dictionary<string, string>
-                {
-                    { "spot_id", "" + spotId }
-                };
-                await APIController.GETAsync(newImageDownloadUrl, headers, vrImageParameter, 10, (resultString) =>
+                await APIController.GETAsync(newImageDownloadUrl + spaceId + "/texture", headers, null, 10, (resultString) =>
                 {
                     if (resultString != "")
                     {
-                        imagePolicy = resultString;
+                        VRImagePolicyData vrImagePolicyData = JsonReader.Deserialize<VRImagePolicyData>(resultString);
+                        imagePolicy = vrImagePolicyData.pre_signed_url;
                         imagePolicyExpireTime = DateTime.Now;
                     }
                 }, (failString) => { });
@@ -386,11 +192,11 @@ namespace maxstAR
 
         public string GetNewVRImagePath()
         {
-            string vrImageURL = newImageDownloadUrl + vrStoragePath + "/textured/";
+            string vrImageURL = newImageDownloadUrl + spaceId + "/texture";
 
             if (this.accessToken == "")
             {
-                MakeAccessToken();
+                Debug.LogError("No AccessToken");
             }
 
             if (debugTexturePath != "")
@@ -405,21 +211,17 @@ namespace maxstAR
                 PovManager povManager = GetComponentInChildren<PovManager>(true);
                 GameObject trackable = povManager.Trackable;
                 VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
-                this.spotId = vPSTrackable.spotId;
-                this.placeId = vPSTrackable.placeId;
+                this.spaceId = vPSTrackable.spaceId;
 
                 var headers = GetHeaders();
 
-                Dictionary<string, string> vrImageParameter = new Dictionary<string, string>
+                StartCoroutine(APIController.GET(newImageDownloadUrl + spaceId + "/texture", headers, null, 10, (resultString) =>
                 {
-                    { "spot_id", "" + spotId }
-                };
-                StartCoroutine(APIController.GET(newImageDownloadUrl, headers, vrImageParameter, 10, (resultString) =>
-                {
-                    Debug.Log(resultString);
+                    //Debug.Log(resultString);
                     if (resultString != "")
                     {
-                        imagePolicy = resultString;
+                        VRImagePolicyData vrImagePolicyData = JsonReader.Deserialize<VRImagePolicyData>(resultString);
+                        imagePolicy = vrImagePolicyData.pre_signed_url;
                         imagePolicyExpireTime = DateTime.Now;
                     }
                 }, (failString) => { }));
@@ -437,160 +239,25 @@ namespace maxstAR
         {
             return new Dictionary<string, string>()
             {
-                { "Authorization",  "Bearer " + this.accessToken},
-                { "Content-Type", "application/json" },
-                { "X-App-Key", applicationKey }
+                { "Authorization", "Bearer " + this.accessToken},
+                { "Content-Type", "application/json" }
             };
         }
 
-        public void SetClientIdClientSecretKeyAndURLAndApplicationKey(string applicationId, string applicationKey, string authorizationURL, string grantType)
+
+        public void SetAccessToken(string accessToken)
         {
-            this.authorizationURL = authorizationURL;
-            this.applicationId = applicationId;
-            this.applicationKey = applicationKey;
-            this.grantType = grantType;
-        }
-
-        public void MakeAccessToken()
-        {
-            if(this.applicationId == "" || this.applicationKey == "")
-            {
-                Debug.LogError("You need Client Id, Client SecretKey to get Token.");
-                return;
-            }
-
-            if (isGettingAccessToken == false || IsTokenExpired())
-            {
-                isGettingAccessToken = true;
-            }
-            else
-            {
-                return;
-            }
-
-            var header = new Dictionary<string, string>()
-            {
-                { "Content-Type", "application/x-www-form-urlencoded" },
-            };
-
-            var param = new Dictionary<string, string>()
-            {
-                { "grant_type",grantType },
-                { "client_id", applicationId },
-                { "client_secret", applicationKey },
-            };
-
-            if(authorizationURL == "")
-            {
-                Debug.LogError("You need Authorization URL to get Access Token.");
-                isGettingAccessToken = false;
-                return;
-            }
-            //Debug.Log($"MakeAccessToken : {authorizationURL}/{header}/{param}");
-            StartCoroutine(APIController.POST(authorizationURL, header, param, 5, completed: (resultString) =>
-            {
-                if (resultString != "")
-                {
-                    try
-                    {
-                        CredentialsToken accessTokenData = JsonReader.Deserialize<CredentialsToken>(resultString);
-                        this.accessToken = accessTokenData.access_token;
-                        this.expiresTime = CurrentTimeSeconds() + accessTokenData.expires_in;
-                        TrackerManager.GetInstance().SetAccessToken(this.accessToken);
-                    }
-                    catch(Exception e)
-                    {
-                        isGettingAccessToken = false;
-                    }
-                    
-                }
-                isGettingAccessToken = false;
-            }));
-        }
-
-        public async Task MakeAccessTokenAsync()
-        {
-            if (this.applicationId == "" || this.applicationKey == "")
-            {
-                Debug.LogError("You need Client Id, Client SecretKey to get Token.");
-                return;
-            }
-
-            if (isGettingAccessToken == false || IsTokenExpired())
-            {
-                isGettingAccessToken = true;
-            }
-            else
-            {
-                return;
-            }
-
-            var header = new Dictionary<string, string>()
-            {
-                { "Content-Type", "application/x-www-form-urlencoded" },
-            };
-
-            var param = new Dictionary<string, string>()
-            {
-                { "grant_type", "client_credentials" },
-                //{ "client_id", clientId },
-                //{ "client_secret", clientSecretKey },
-            };
-
-            if (authorizationURL == "")
-            {
-                Debug.LogError("You need Authorization URL to get Access Token.");
-                isGettingAccessToken = false;
-                return;
-            }
-
-            await APIController.POSTAsync(authorizationURL, header, param, 5, completed: (resultString) =>
-            {
-                if (resultString != "")
-                {
-                    try
-                    {
-                        CredentialsToken accessTokenData = JsonReader.Deserialize<CredentialsToken>(resultString);
-                        this.accessToken = accessTokenData.access_token;
-                        this.expiresTime = CurrentTimeSeconds() + accessTokenData.expires_in;
-                        TrackerManager.GetInstance().SetAccessToken(this.accessToken);
-                    }
-                    catch (Exception e)
-                    {
-                        isGettingAccessToken = false;
-                    }
-
-                }
-                isGettingAccessToken = false;
-            });
+            this.accessToken = accessToken;
+            TrackerManager.GetInstance().SetAccessToken(this.accessToken);
         }
 
         public string GetAccessToken()
         {
+            if (this.accessToken == "")
+            {
+                Debug.LogError("No AccessToken");
+            }
             return this.accessToken;
-        }
-
-        public string GetApplicationKey()
-        {
-            return this.applicationKey;
-        }
-
-        private bool IsTokenExpired()
-        {
-            return this.expiresTime - 30 < CurrentTimeSeconds();
-        }
-
-        private long CurrentTimeSeconds()
-        {
-            return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
-        }
-
-        [Serializable]
-        public class CredentialsToken
-        {
-            public string access_token;
-            public long expires_in;
-            public string token_type;
         }
     }
 }

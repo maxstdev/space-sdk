@@ -49,7 +49,7 @@ namespace Maxst.Passport
         private string GetUrl()
         {
             //var prefix = EnvAdmin.Instance.CurrentEnv.Value == EnvType.Alpha ? "/api" : "";
-            return $"{EnvAdmin.Instance.AuthUrlSetting[URLType.API]}";
+            return $"{EnvAdmin.Instance.AuthUrlSetting.Urls[URLType.API]}";
         }
 
         public IObservable<CredentialsToken> ConfidentialPassportToken(

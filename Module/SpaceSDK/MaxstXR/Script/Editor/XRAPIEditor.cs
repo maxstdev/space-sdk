@@ -14,14 +14,13 @@ public class XRAPIEditor : Editor
         DrawDefaultInspector();
         XRAPI xrAPI = (XRAPI)target;
 
-        if(xrAPI.placeId <= 0 || xrAPI.spotId <= 0)
+        if(xrAPI.spaceId == "")
         {
             if(xrAPI.GetComponentInChildren<PovManager>() != null)
             {
                 GameObject trackable = xrAPI.GetComponentInChildren<PovManager>().Trackable;
                 VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
-                xrAPI.spotId = vPSTrackable.spotId;
-                xrAPI.placeId = vPSTrackable.placeId;
+                xrAPI.spaceId = vPSTrackable.spaceId;
             }
         }
 

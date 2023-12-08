@@ -4,6 +4,9 @@ namespace MaxstXR.Place
 {
     public class MapSpot
     {
+        [JsonProperty("spaceId")]
+        public string spaceId;
+
         [JsonProperty("placeId")] 
         public string placeId;
         

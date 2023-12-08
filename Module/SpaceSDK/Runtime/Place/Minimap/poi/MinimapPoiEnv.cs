@@ -35,7 +35,8 @@ namespace MaxstXR.Place
 
         public override bool IsInitialize()
         {
-            return !string.IsNullOrEmpty(XrSettings.NavigationLocation.Value);
+            //return !string.IsNullOrEmpty(XrSettings.NavigationLocation.Value);
+            return true;
         }
 
         public override float UnitDistance()
@@ -49,7 +50,8 @@ namespace MaxstXR.Place
 
         public override string VisibleNavigationLocation()
         {
-            return XrSettings.NavigationLocation.Value;
+            //return XrSettings.NavigationLocation.Value;
+            return "Temp";
         }
 
         public override ref Vector3 CurrentPosition()

@@ -162,7 +162,8 @@ public class XRStudioController : MaxstSingleton<XRStudioController>
             {
                 VPSTrackable trackable = meshObject.GetComponent<VPSTrackable>();
                 trackableGameObject = meshObject;
-				XRAPI.Instance.SetPlaceIdSpotId(trackable.placeId, trackable.spotId);
+
+                XRAPI.Instance.SetSpaceId(trackable.spaceId);
             }
         }
 

@@ -1,8 +1,6 @@
 ﻿#define API_DETAIL_DEBUG
 using Cysharp.Threading.Tasks;
 using Maxst.Passport;
-using Maxst.Settings;
-using maxstAR;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,13 +11,21 @@ namespace MaxstXR.Place
 {
 	public partial class CustomerRepo : Injector
 	{
-		public List<Place> CachePlaceList { get; private set; }
+        public enum SortDirection
+        {
+            None, ASC, DESC
+        }
+
+        public List<Space> CacheSpaceDataList { get; private set; }
+
+        public List<Place> CachePlaceList { get; private set; }
 		public List<Spot> CacheSpotList { get; private set; }
 		public List<FirstCategory> CacheCategoryList { get; private set; }
 		public List<Poi> CachePoIList { get; private set; }
 
-		private Place cacheCategoryPlace;
-		private Spot cacheCategorySpot;
+		private Space cacheCategorySpace;
+        private Place cacheCategoryPlace;
+        private Spot cacheCategorySpot;
 		private BaseCategory cacheCategory;
 
 
@@ -43,9 +49,135 @@ namespace MaxstXR.Place
             return TokenRepo.Instance.GetClientToken();
         }
 
-		public async UniTask<List<Place>> FetchPlaceList(List<string> whiteList = null)
-		{
-			var completionSource = new TaskCompletionSource<List<Place>>();
+        public async UniTask<Space> RequestSpace(string spaceId)
+        {
+            var completionSource = new TaskCompletionSource<Space>();
+            var token = await GetClientToken();
+            var ob = SpaceConsole.Instance.ReqSpace(token.BearerAccessToken, spaceId);
+            ob.SubscribeOn(Scheduler.MainThreadEndOfFrame)
+                .ObserveOn(Scheduler.MainThread)
+                .Subscribe(data =>   // on success
+                {
+                    var space = data;
+                    completionSource.TrySetResult(space);
+                },
+                error => // on error
+                {
+                    Debug.LogWarning(error);
+                    completionSource.TrySetException(error);
+
+                },
+                () =>
+                {
+
+                });
+            return await completionSource.Task;
+        }
+
+        /// <summary>
+        ///  returned only if SpaceStep is Public
+        /// </summary>
+        /// <param name="whiteList"></param>
+        /// <returns></returns>
+        public async UniTask<List<Space>> FetchSpaceList(
+            string sortBy = "createdAt",
+            SortDirection sortDirection = SortDirection.ASC,
+            List<string> whiteList = null
+            )
+        {
+            var completionSource = new TaskCompletionSource<List<Space>>();
+
+            var token = await GetClientToken();
+
+            var hasDirection = (sortDirection != SortDirection.None);
+            string directrion = hasDirection ? sortDirection.ToString() : null;
+            string sortCondition = hasDirection ? sortBy : null;
+
+            var ob = SpaceConsole.Instance.ReqSpaceList(token.BearerAccessToken, 1, 100, sortCondition, directrion);
+            ob.SubscribeOn(Scheduler.MainThreadEndOfFrame)
+                .ObserveOn(Scheduler.MainThread)
+                .Subscribe(data =>   // on success
+                {
+#if API_DETAIL_DEBUG
+                    Debug.Log($"FetchSpaceList Received success data count : {data?.spaceList?.Count ?? -1}");
+#endif
+                    var spaceList = data.SpaceList;
+
+                    if (whiteList != null)
+                    {
+                        spaceList = spaceList.Where(space => whiteList.Contains(space.spaceId)).ToList();
+                    }
+
+                    CacheSpaceDataList = spaceList;
+                    completionSource.TrySetResult(spaceList);
+                    cacheCategorySpace = null;
+                },
+                error => // on error
+                {
+                    Debug.LogWarning(error);
+                    completionSource.TrySetException(error);
+
+                },
+                () =>
+                {
+
+                });
+
+            return await completionSource.Task;
+        }
+
+        public async UniTask<List<Space>> FetchSpaceListAll(
+            SpaceStep step = SpaceStep.FINISHED,
+            string sortBy = "createdAt",
+            SortDirection sortDirection = SortDirection.ASC,
+            List<string> whiteList = null
+            )
+        {
+            var completionSource = new TaskCompletionSource<List<Space>>();
+
+            var token = await GetClientToken();
+
+            var hasDirection = (sortDirection != SortDirection.None);
+            string directrion = hasDirection ? sortDirection.ToString() : null;
+            string sortCondition = hasDirection ? sortBy : null;
+
+            var ob = SpaceConsole.Instance.ReqSpaceListAll(token.BearerAccessToken, step, 1, 100, sortCondition, directrion);
+            ob.SubscribeOn(Scheduler.MainThreadEndOfFrame)
+                .ObserveOn(Scheduler.MainThread)
+                .Subscribe(data =>   // on success
+                {
+#if API_DETAIL_DEBUG
+                    Debug.Log($"FetchSpaceListAll Received success data count : {data?.spaceList?.Count ?? -1}");
+#endif
+                    var spaceList = data.SpaceList;
+
+                    if (whiteList != null)
+                    {
+                        spaceList = spaceList.Where(space => whiteList.Contains(space.spaceId)).ToList();
+                    }
+
+                    CacheSpaceDataList = spaceList;
+                    completionSource.TrySetResult(spaceList);
+                    cacheCategorySpace = null;
+                },
+                error => // on error
+                {
+                    Debug.LogWarning(error);
+                    completionSource.TrySetException(error);
+
+                },
+                () =>
+                {
+
+                });
+
+            return await completionSource.Task;
+        }
+
+
+        public async UniTask<List<Place>> FetchPlaceList(List<string> whiteList = null)
+        {
+            var completionSource = new TaskCompletionSource<List<Place>>();
 
             var token = await GetClientToken();
 
@@ -78,39 +210,39 @@ namespace MaxstXR.Place
                 });
 
             return await completionSource.Task;
-		}
+        }
 
-		public async UniTask<List<Place>> FetchPlaceListAll()
-		{
-			var completionSource = new TaskCompletionSource<List<Place>>();
+        //		public async UniTask<List<Place>> FetchPlaceListAll()
+        //		{
+        //			var completionSource = new TaskCompletionSource<List<Place>>();
 
-            var token = await GetClientToken();
+        //            var token = await GetClientToken();
 
-            var ob = CustomerService.Instance.ReqPlaceListAll(token.access_token);
-            ob.SubscribeOn(Scheduler.MainThreadEndOfFrame)
-                .ObserveOn(Scheduler.MainThread)
-                .Subscribe(data =>   // on success
-                {
-#if API_DETAIL_DEBUG
-                    Debug.Log($"ReqPlaceListAll Received success data count : {data?.Count ?? -1}");
-#endif
-                    CachePlaceList = data;
-                    completionSource.TrySetResult(data);
-                    cacheCategoryPlace = null;
-                },
-                error => // on error
-                {
-                    Debug.LogWarning(error);
-                    completionSource.TrySetException(error);
+        //            var ob = CustomerService.Instance.ReqPlaceListAll(token.access_token);
+        //            ob.SubscribeOn(Scheduler.MainThreadEndOfFrame)
+        //                .ObserveOn(Scheduler.MainThread)
+        //                .Subscribe(data =>   // on success
+        //                {
+        //#if API_DETAIL_DEBUG
+        //                    Debug.Log($"ReqPlaceListAll Received success data count : {data?.Count ?? -1}");
+        //#endif
+        //                    CachePlaceList = data;
+        //                    completionSource.TrySetResult(data);
+        //                    cacheCategoryPlace = null;
+        //                },
+        //                error => // on error
+        //                {
+        //                    Debug.LogWarning(error);
+        //                    completionSource.TrySetException(error);
 
-                },
-                () =>
-                {
+        //                },
+        //                () =>
+        //                {
 
-                });
+        //                });
 
-			return await completionSource.Task;
-		}
+        //			return await completionSource.Task;
+        //		}
 
 #if false
 		public void FetchFilterdPlace(RxJob job)
@@ -139,7 +271,7 @@ namespace MaxstXR.Place
 		}
 #endif
 
-		public async UniTask<PlaceDetail> FetchPlaceDatail(long placeId)
+        public async UniTask<PlaceDetail> FetchPlaceDatail(long placeId)
 		{
 			var completionSource = new TaskCompletionSource<PlaceDetail>();
 
@@ -169,8 +301,8 @@ namespace MaxstXR.Place
 			return await completionSource.Task;
 		}
 
-		public async UniTask<List<Spot>> FetchSpotList(long placeId)
-		{
+        public async UniTask<List<Spot>> FetchSpotList(long placeId)
+        {
             var completionSource = new TaskCompletionSource<List<Spot>>();
 
             var token = await GetClientToken();
@@ -199,11 +331,11 @@ namespace MaxstXR.Place
                 });
 
             return await completionSource.Task;
-		}
+        }
 
-		public async UniTask<SpotDetail> FetchSpotDatail(long spotId)
-		{
-			var completionSource = new TaskCompletionSource<SpotDetail>();
+        public async UniTask<SpotDetail> FetchSpotDatail(long spotId)
+        {
+            var completionSource = new TaskCompletionSource<SpotDetail>();
 
             var token = await GetClientToken();
 
@@ -228,13 +360,13 @@ namespace MaxstXR.Place
 
                 });
 
-			return await completionSource.Task;
-		}
+            return await completionSource.Task;
+        }
 
-		public async UniTask<List<Poi>> FetchPoiListFormPlace(Place place, List<Spot> spots)
-		{
-			Debug.Log($"FetchPoiListFormPlace {place.placeId}");
-			var completionSource = new TaskCompletionSource<List<Poi>>();
+        public async UniTask<List<Poi>> FetchPoiListFormPlace(Place place, List<Spot> spots)
+        {
+            Debug.Log($"FetchPoiListFormPlace {place.placeId}");
+            var completionSource = new TaskCompletionSource<List<Poi>>();
 
             var token = await GetClientToken();
 
@@ -271,9 +403,9 @@ namespace MaxstXR.Place
                 });
 
             return await completionSource.Task;
-		}
+        }
 
-		public async UniTask<PoiDetail> FetchPoiDetail(string uuid)
+        public async UniTask<PoiDetail> FetchPoiDetail(string uuid)
 		{
 			var completionSource = new TaskCompletionSource<PoiDetail>();
 
@@ -301,5 +433,48 @@ namespace MaxstXR.Place
             
 			return await completionSource.Task;
 		}
-	}
+
+        public async UniTask<List<Poi>> FetchPoiListFormSpace(string spaceid)
+        {
+            Debug.Log($"FetchPoiListFormPlace {spaceid}");
+            var completionSource = new TaskCompletionSource<List<Poi>>();
+
+            var token = await GetClientToken();
+
+            var ob = SpaceConsole.Instance.ReqPoiListFromSpace(token.access_token, spaceid);
+            ob.SubscribeOn(Scheduler.MainThreadEndOfFrame)
+                .ObserveOn(Scheduler.MainThread)
+                .Subscribe(data =>   // on success
+                {
+#if API_DETAIL_DEBUG
+                    Debug.Log($"ReqPoiListFormPlace({spaceid}) Received success data count : {data.Count}");
+#endif
+                    var categoryFilterList = new HashSet<BaseCategory>();
+                    foreach (var d in data)
+                    {
+                        //d.refPlace = place;
+                        //d.refSpot = FindSpot(d.spotId, spots);
+                        d.refCategory = FindCategory(d.category?.categoryId ?? 0L);
+                        if (d.refCategory != null) categoryFilterList.Add(d.refCategory);
+                    }
+                    CachePoIList = data;
+                    UpdateCategoryFilterList(categoryFilterList);
+                    completionSource.TrySetResult(data);
+
+                },
+                error => // on error
+                {
+                    Debug.LogWarning(error);
+                    completionSource.TrySetException(error);
+
+                },
+                () =>
+                {
+
+                });
+
+            return await completionSource.Task;
+        }
+
+    }
 }

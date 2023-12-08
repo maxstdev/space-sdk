@@ -1,3 +1,4 @@
+using Maxst.Settings;
 using Retrofit;
 using Retrofit.HttpImpl;
 using Retrofit.Parameters;
@@ -5,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using static System.Net.WebRequestMethods;
 using HeaderAttribute = Retrofit.Parameters.HeaderAttribute;
 
 namespace MaxstXR.Place
@@ -42,7 +44,8 @@ namespace MaxstXR.Place
 
         protected override void SetRestAPI()
         {
-            baseUrl = "https://api.maxverse.io";
+            var DomainPrefix = EnvAdmin.Instance.CurrentEnv.Value == EnvType.Alpha ? "alpha-" : "";
+            baseUrl = $"https://{DomainPrefix}api.maxverse.io";
             iRestInterface = typeof(IXRApi);
         }
 

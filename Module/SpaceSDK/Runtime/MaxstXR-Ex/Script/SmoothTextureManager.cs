@@ -1,4 +1,5 @@
 ﻿//#define ENABLE_FILE_CACHE
+using Maxst.Passport;
 using MaxstXR.Place;
 using System;
 using System.Collections;
@@ -28,7 +29,8 @@ namespace MaxstXR.Extension
 
         [SerializeField] private string TextureKTXExtension = ".ktx2";
 
-        [SerializeField] private Spot resSpot = null;
+        private string resSpace = null;
+        private string resSpot = null;
         [SerializeField] private string imageUrl = null;
         [SerializeField] private long policyExpireTime = 0;
 
@@ -80,11 +82,11 @@ namespace MaxstXR.Extension
             }
         }
 
-        public async Task LoadTextureBounds(PovController povController, List<int> bounds,
+        public async Task LoadTextureBounds(PovKeyFrame keyFrame, List<int> bounds,
             CancellationTokenSource cancellation, UnityAction<SmoothSharedTexture> injectAction,
             ITransitionDelegate transitionDelegate = null)
         {
-            var baseTexturePath = "image8k_split" + "/" + povController.Name;
+            var baseTexturePath = "image8k_split" + "/" + keyFrame.NextPov.Name;
 
             await CheckTexturesDirectory();
             await RefreshTokenIfNotExists();
@@ -92,14 +94,14 @@ namespace MaxstXR.Extension
             foreach (var bound in bounds)
             {
                 var texturePath = baseTexturePath + "_" + bound;
-                if (!GenSmoothSharedTexture(texturePath, bound, povController, injectAction, out var sharedTexture))
+                if (!GenSmoothSharedTexture(texturePath, bound, keyFrame.NextPov, injectAction, out var sharedTexture))
                 {
                     continue;
                 }
 
                 try
                 {
-                    var texture = await LoadTextureByImage(texturePath, cancellation, transitionDelegate);
+                    var texture = await LoadTextureByImage(texturePath, cancellation, keyFrame, transitionDelegate);
                     lock (lockObj)
                     {
                         //Debug.Log("LoadTexture sharedTexture texture inject : " + texturePath);
@@ -123,23 +125,23 @@ namespace MaxstXR.Extension
         }
 
 
-        public async Task<SmoothSharedTexture> LoadTexture(PovController povController,
+        public async Task<SmoothSharedTexture> LoadTexture(PovKeyFrame keyFrame,
             CancellationTokenSource cancellation, UnityAction<SmoothSharedTexture> injectAction,
             ITransitionDelegate transitionDelegate = null)
         {
-            var texturePath = "image2k" + "/" + povController.Name;
+            var texturePath = "image2k" + "/" + keyFrame.NextPov.Name;
 
             await CheckTexturesDirectory();
             await RefreshTokenIfNotExists();
 
-            if (!GenSmoothSharedTexture(texturePath, null, povController, injectAction, out var sharedTexture))
+            if (!GenSmoothSharedTexture(texturePath, null, keyFrame.NextPov, injectAction, out var sharedTexture))
             {
                 return sharedTexture;
             }
 
             try
             {
-                var texture = await LoadTextureByImage(texturePath, cancellation, transitionDelegate);
+                var texture = await LoadTextureByImage(texturePath, cancellation, keyFrame, transitionDelegate);
                 lock (lockObj)
                 {
                     //Debug.Log("LoadTexture sharedTexture texture inject : " + texturePath);
@@ -149,7 +151,8 @@ namespace MaxstXR.Extension
             catch (Exception e)
             {
                 Debug.LogWarning(e);
-                transitionDelegate?.DownloadException(e);
+                keyFrame.KeyFrameStatus = TransitionStatus.DownloadError;
+                transitionDelegate?.DownloadException(keyFrame, e);
             }
             return sharedTexture;
         }
@@ -222,19 +225,19 @@ namespace MaxstXR.Extension
         }
 
         private async Task<Texture2D> LoadTextureByImage(string texturePath,
-            CancellationTokenSource tokenSource, ITransitionDelegate transitionDelegate)
+            CancellationTokenSource tokenSource, PovKeyFrame keyFrame, ITransitionDelegate transitionDelegate)
         {
-            string ImagePath = await GetImageUrl(SceneViewModel.CurrentSpot);
+            string ImagePath = await GetImageUrl(SceneViewModel.CurrentTextureKey());
             string combine_texturePath = ImagePath.Replace("*", texturePath + TextureJPGExtension);
             //if (updateProgress) { NumStartedLoading += 1u; }
 
             //var testPath = XRServiceManager.Instance.TestVRImagePath() + texturePath + TextureJPGExtension;
             //await DefaultLoadTexture(testPath, tokenSource, downloadDelegate);
-            return await RequestGetTexture(combine_texturePath, tokenSource, transitionDelegate); ;
+            return await RequestGetTexture(combine_texturePath, tokenSource, keyFrame, transitionDelegate); ;
         }
 
         private async Task<Texture2D> RequestGetTexture(string texturePath,
-            CancellationTokenSource cancellation, ITransitionDelegate transitionDelegate)
+            CancellationTokenSource cancellation, PovKeyFrame keyFrame, ITransitionDelegate transitionDelegate)
         {
 #if ENABLE_FILE_CACHE
             var texture = await LoadCacheOrUrl(texturePath, true);
@@ -245,9 +248,10 @@ namespace MaxstXR.Extension
             www.downloadHandler = handlerTexture;
             var request = www.SendWebRequest();
 
-            transitionDelegate?.DownloadStart();
+            keyFrame.KeyFrameStatus = TransitionStatus.DownloadStarted;
+            transitionDelegate?.DownloadStart(keyFrame);
             var progressValue = 0f;
-            transitionDelegate?.DownloadProgess(progressValue);
+            transitionDelegate?.DownloadProgess(keyFrame, progressValue);
             while (!www.isDone)
             {
                 if (cancellation.Token.IsCancellationRequested)
@@ -258,7 +262,7 @@ namespace MaxstXR.Extension
                     cancellation.Token.ThrowIfCancellationRequested();
                 }
                 progressValue = Mathf.Max(progressValue, www.downloadProgress);
-                transitionDelegate?.DownloadProgess(progressValue * 100);
+                transitionDelegate?.DownloadProgess(keyFrame, progressValue * 100);
                 await Task.Yield();
             }
 
@@ -266,17 +270,19 @@ namespace MaxstXR.Extension
             {
                 Debug.Log("LoadTextureByImage : " + www.error);
                 Debug.Log("Error Path : " + texturePath);
-                transitionDelegate?.DownloadException(www);
+                keyFrame.KeyFrameStatus = TransitionStatus.DownloadError;
+                transitionDelegate?.DownloadException(keyFrame, www);
                 www.Dispose();
                 return null;
             }
 
-            transitionDelegate?.DownloadProgess(100);
+            transitionDelegate?.DownloadProgess(keyFrame, 100);
             var texture = handlerTexture.texture;
             www.Dispose();
 #endif
             //if (updateProgress) { NumFinishedLoading += 1u; }
-            transitionDelegate?.DownloadComplete();
+            keyFrame.KeyFrameStatus = TransitionStatus.DownloadEnded;
+            transitionDelegate?.DownloadComplete(keyFrame);
             texture.wrapMode = TextureWrapMode.Clamp;
             return texture;
         }
@@ -296,49 +302,78 @@ namespace MaxstXR.Extension
             return (long)(System.DateTime.UtcNow - new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds;
         }
 
-        private async Task<string> GetImageUrl(Spot spot)
+        private async Task<string> GetImageUrl(string id)
+        {
+            return VersionController.Instance.CurrentMode == VersionController.Mode.Modern
+                ? await GetModernImageUrl(id)
+                : await GetLegacyImageUrl(id);
+        }
+
+        private async Task<string> GetModernImageUrl(string id)
         {
             var completionSource = new TaskCompletionSource<string>();
-            if (spot == null)
+
+            if (string.IsNullOrEmpty(id))
             {
-                completionSource.SetException(new Exception("spot is null"));
+                completionSource.SetException(new Exception("Space is null"));
+                return await completionSource.Task;
             }
-            else
+
+            if (id == resSpace && !string.IsNullOrEmpty(imageUrl) && !IsPolicyExpired())
             {
-                if (spot.id == resSpot.id
-                    && !string.IsNullOrEmpty(imageUrl)
-                    && !IsPolicyExpired())
-                {
-                    completionSource.SetResult(imageUrl);
-                }
-                else
-                {
-                    var ob = Place.XRService.Instance.GetImageUrl(
-                        spot.id.ToString(),
-                        XRServiceManager.authorization,
-                        XRServiceManager.contentType)
+                completionSource.SetResult(imageUrl);
+                return await completionSource.Task;
+            }
+
+            var token = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig);
+            var ob = SpaceConsole.Instance.GetImageUrl(token, id)
                         .SubscribeOn(Scheduler.MainThreadEndOfFrame)
                         .ObserveOn(Scheduler.MainThread)
                         .Subscribe(data =>
                         {
-                            //Debug.Log("GetImageUrl : " + data);
-                            resSpot = spot;
+                            resSpace = id;
+                            imageUrl = data.url;
+                            policyExpireTime = CurrentTimeSeconds() + ValidSeconds;
+                            completionSource.SetResult(data.url);
+                        }, error =>
+                        {
+                            completionSource.SetException(error);
+                        });
+
+            return await completionSource.Task;
+        }
+
+        private async Task<string> GetLegacyImageUrl(string id)
+        {
+            var completionSource = new TaskCompletionSource<string>();
+
+            if (string.IsNullOrEmpty(id))
+            {
+                completionSource.SetException(new Exception("Spot is null"));
+                return await completionSource.Task;
+            }
+
+            if (id == resSpot && !string.IsNullOrEmpty(imageUrl) && !IsPolicyExpired())
+            {
+                completionSource.SetResult(imageUrl);
+                return await completionSource.Task;
+            }
+
+            var token = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig);
+            var contentType = XRTokenManager.Instance.contentType;
+            var ob = Place.XRService.Instance.GetImageUrl(id, token, contentType)
+                        .SubscribeOn(Scheduler.MainThreadEndOfFrame)
+                        .ObserveOn(Scheduler.MainThread)
+                        .Subscribe(data =>
+                        {
+                            resSpot = id;
                             imageUrl = data;
                             policyExpireTime = CurrentTimeSeconds() + ValidSeconds;
-                            //Debug.Log("policyTime ============> " + policyExpireTime);
                             completionSource.SetResult(data);
-                        }
-                        , error =>
+                        }, error =>
                         {
-                            //Debug.Log("GetImageUrl : " + error);
                             completionSource.SetException(error);
-                        },
-                        () =>
-                        {
-
                         });
-                }
-            }
 
             return await completionSource.Task;
         }
@@ -354,7 +389,7 @@ namespace MaxstXR.Extension
         public void SetHeaders(UnityWebRequest www)
         {
             var dic = new Dictionary<string, string> {
-                { "Authorization", XRServiceManager.authorization }
+                { "Authorization", XRTokenManager.Instance.authorization }
             };
 
             foreach (var header in dic)

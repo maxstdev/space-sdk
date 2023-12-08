@@ -22,6 +22,7 @@ namespace MaxstXR.Place
         // https://api.maxverse.io/poi-admin
         [SerializeField] private string publicUrl;
         //https://api.maxverse.io/poi-authoring-tool
+        // https://api.maxst.com/space
         [SerializeField] private string topologyUrl;
         //https://api.maxverse.io/asset-integration
         [SerializeField] private string resourceUrl;

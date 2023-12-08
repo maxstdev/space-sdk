@@ -157,7 +157,7 @@ namespace MaxstXR.Place
             pos.y = MINIMAP_CAMERA_POS_Y;
 
             minimapMyIconRenderer.transform.position = pos;
-            minimapMyIconRenderer.transform.Translate(new Vector3(0, 0, 10), Space.Self);
+            minimapMyIconRenderer.transform.Translate(new Vector3(0, 0, 10), UnityEngine.Space.Self);
             minimapMyIconRenderer.transform.rotation = Quaternion.Euler(90, q.eulerAngles.y, 0);
 
             var temp = minimapMyIconRenderer.transform.rotation;

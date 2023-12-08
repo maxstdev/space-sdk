@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7068059249072869789}
   - component: {fileID: 7068059249072869786}
-  - component: {fileID: 3589489219043505375}
+  - component: {fileID: 399884786}
   m_Layer: 0
   m_Name: XRStudio
   m_TagString: Untagged
@@ -45,20 +45,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ca46fa553401cc04fbd99c8309ad5a77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  xrPath: D:\work\XRData\XRMap\marronnier
+  xrPath: D:\work\XRData\XRMap\leesunsinpark_all
   selectIndex: 10
-  xrSimulatePath: D:\00.G\XRData\XRSimulationData\maxst2f\2021_03_15_09_53_33_277
+  xrSimulatePath: D:/00.G/99.xrsdk_maxst/Assets/../../XRData/XRSimulationData/maxst2f\2021_03_15_09_53_33_277
   simulate_selectIndex: 0
   meshObject: {fileID: 0}
   ARMode: 0
-  IsLegacySDK: 0
   <PovPrefeb>k__BackingField: {fileID: 6124233169577031976, guid: a33c8e389bb4f9341baa514fb6f2bfd0,
     type: 3}
   <IbrCullBack>k__BackingField: {fileID: 2100000, guid: 75598ac40e7058e4abcaeeb3a5095f5d,
     type: 2}
   <IbrCullFront>k__BackingField: {fileID: 2100000, guid: 00eac6b3c5c32054abee333fbec84b41,
     type: 2}
---- !u!114 &3589489219043505375
+--- !u!114 &399884786
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -70,10 +69,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8c92eff12fbb441ab9458a3eb47029a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spotId: -1
-  placeId: -1
-  authorizationURL: https://api.maxst.com/auth/realms/maxst/protocol/openid-connect/token
-  applicationId: f440fb68-42b6-4502-a7c8-c883b79a9f93
-  applicationKey: b2cd5641-a00b-4017-b256-4c696825f7ab
-  grantType: 
-  imagePolicy: 
+  spaceId: 
+  accessToken: 

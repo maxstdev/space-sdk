@@ -51,7 +51,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   progressPrefeb: {fileID: 2063702605332599167, guid: b0d5a874a484dc94e815012820b23a8a,
     type: 3}
-  placesPrefeb: {fileID: 5748388740595645839, guid: 187821a9b1bae2f4584f7fb5376d3823,
+  spacePrefeb: {fileID: 5748388740595645839, guid: 187821a9b1bae2f4584f7fb5376d3823,
     type: 3}
   spotsPrefeb: {fileID: 2648630933929055498, guid: 4dfcae28b806c254ab7bb04ef0186af2,
+    type: 3}
+  placePrefeb: {fileID: 5748388740595645839, guid: 0a6de1841e81f3c47a42388dabbd6eed,
     type: 3}

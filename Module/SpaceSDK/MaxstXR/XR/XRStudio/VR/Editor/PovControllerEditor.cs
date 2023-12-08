@@ -37,7 +37,11 @@ public class PovControllerEditor : Editor
             else if (sibr)
             {
                 var TextureManager = FindObjectOfType<SmoothTextureManager>(true);
-                var _ = await TextureManager.LoadTexture(self, new CancellationTokenSource(),
+                var keyFrame = new PovKeyFrame(self, self)
+                {
+                    KeyFrameSource = KeyFrameSource.Editor,
+                };
+                var _ = await TextureManager.LoadTexture(keyFrame, new CancellationTokenSource(),
                 (st) =>
                 {
                     sibr.StartFrom(self, st);

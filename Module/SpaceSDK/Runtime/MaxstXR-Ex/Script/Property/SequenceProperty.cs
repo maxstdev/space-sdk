@@ -26,6 +26,5 @@ namespace MaxstXR.Extension
 
         //status
         public virtual ReactiveProperty<bool> IsSelect { get; set; } = new ReactiveProperty<bool>(false);
-        public virtual ReactiveProperty<bool> IsFinished { get; set; } = new ReactiveProperty<bool>(false);
     }
 }

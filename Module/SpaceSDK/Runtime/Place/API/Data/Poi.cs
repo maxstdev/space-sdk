@@ -17,7 +17,8 @@ namespace MaxstXR.Place
         [JsonProperty("poi_name_ko")] public string poiNameKo;
         [JsonProperty("poi_name_en")] public string poiNameEn;
         [JsonProperty("category_info")] public PoiCategory category;
-        
+        [JsonProperty("poi_name")] public PoiName poiname;
+
         [JsonProperty("view_level")] public int viewLevel;
         [JsonProperty("floor")] public int? floor;
         [JsonProperty("tags")] public List<string> tags;
@@ -29,6 +30,7 @@ namespace MaxstXR.Place
         [JsonProperty("connect_poi_uuid")] public string connectPoiUuid;
         [JsonProperty("custom")]
         //[JsonConverter(typeof(PoiExtensionConverter))] public ExtensionObject extensionObject;
+
 
         [JsonIgnore] public bool contained = false;
 
@@ -176,6 +178,13 @@ namespace MaxstXR.Place
             return detailInformation?.expansion?.department ?? ""; 
         }
         */
+    }
+
+    [Serializable]
+    public class PoiName
+    {
+        [JsonProperty("ko")] public string ko;
+        [JsonProperty("en")] public string en;
     }
 
     [Serializable]

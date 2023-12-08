@@ -33,10 +33,31 @@ namespace MaxstXR.Place
             this.clientToken = token;
         }
 
+        public async UniTask<MapSpot> ReqMapSpots(string authorization, string key)
+        {
+            TaskCompletionSource<MapSpot> completionSource = new();
+            service.GetMapSpots(authorization, key)
+                .SubscribeOn(Scheduler.MainThreadEndOfFrame)
+                .ObserveOn(Scheduler.MainThread)
+                .Subscribe(data =>
+                {
+                    Debug.Log($"[ReqMapSpots] data : {data.resource.GetResourcePath()}");
+                    completionSource.TrySetResult(data);
+                },
+                error =>
+                {
+                    Debug.LogError(error);
+                    completionSource.TrySetException(error);
+                    completionSource.SetCanceled();
+                });
+            return await completionSource.Task;
+        }
+
         public async UniTask<MapSpot> ReqMapSpots(string authorization, long spotId)
         {
             TaskCompletionSource<MapSpot> completionSource = new();
-            service.GetMapSpots(authorization, spotId)
+            service.LegacyGetMapSpots(authorization, spotId)
+                .SubscribeOn(Scheduler.MainThreadEndOfFrame)
                 .ObserveOn(Scheduler.MainThread)
                 .Subscribe(data =>
                 {

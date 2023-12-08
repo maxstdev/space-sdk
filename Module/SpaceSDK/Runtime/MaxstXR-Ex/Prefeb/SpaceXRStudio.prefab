@@ -45,13 +45,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ca46fa553401cc04fbd99c8309ad5a77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  xrPath: D:\work\XRData\XRMap\marronnier
+  xrPath: D:\work\XRData\XRMap\leesunsinpark_all
   selectIndex: 10
   xrSimulatePath: D:\00.G\XRData\XRSimulationData\maxst2f\2021_03_15_09_53_33_277
   simulate_selectIndex: 0
   meshObject: {fileID: 0}
   ARMode: 0
-  IsLegacySDK: 0
   <PovPrefeb>k__BackingField: {fileID: 6124233169577031976, guid: a33c8e389bb4f9341baa514fb6f2bfd0,
     type: 3}
   <IbrCullBack>k__BackingField: {fileID: 2100000, guid: 75598ac40e7058e4abcaeeb3a5095f5d,
@@ -70,5 +69,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b44d957d92e1c3e4681f4950b018c07d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spotId: -1
-  placeId: -1
+  spaceId: 

@@ -92,22 +92,21 @@ namespace MaxstXR.Place
         }
 
         public IObservable<List<Place>> ReqPlaceList(
-			[Retrofit.Parameters.Header(ApiConst.Authorization)] string authorization)
+      [Retrofit.Parameters.Header(ApiConst.Authorization)] string authorization)
         {
             return SendRequest<List<Place>>(MethodBase.GetCurrentMethod(),
-				authorization) as IObservable<List<Place>>;
+          authorization) as IObservable<List<Place>>;
 
         }
 
-		public IObservable<List<Place>> ReqPlaceListAll(
-			[Retrofit.Parameters.Header(ApiConst.Authorization)] string authorization)
-		{
-			return SendRequest<List<Place>>(MethodBase.GetCurrentMethod(),
-				authorization) as IObservable<List<Place>>;
+        public IObservable<List<Place>> ReqPlaceListAll(
+            [Retrofit.Parameters.Header(ApiConst.Authorization)] string authorization)
+        {
+            return SendRequest<List<Place>>(MethodBase.GetCurrentMethod(),
+                authorization) as IObservable<List<Place>>;
+        }
 
-		}
-		
-		public IObservable<PlaceDetail> ReqPlaceDetail(
+        public IObservable<PlaceDetail> ReqPlaceDetail(
 			[Retrofit.Parameters.Header(ApiConst.Authorization)] string authorization,
 			[Path("place_id")] long placeId)
         {

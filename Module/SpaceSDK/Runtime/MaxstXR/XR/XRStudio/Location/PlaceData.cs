@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlaceData
+public class SpaceData
 {
-    public int place_id { get; set; }
-    public string place_unique_name { get; set; }
+    public string space_id { get; set; }
+    public string name { get; set; }
+    public string description { get; set; }
 }

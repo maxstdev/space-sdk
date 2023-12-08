@@ -58,7 +58,8 @@ public class PovController : MonoBehaviour, IPov
         else if (sibr)
         {
             var TextureManager = FindObjectOfType<SmoothTextureManager>(true);
-            var _ = await TextureManager.LoadTexture(this, new CancellationTokenSource(),
+            var keyFrame = new PovKeyFrame(this, this) { KeyFrameSource = KeyFrameSource.Editor, };
+            var _ = await TextureManager.LoadTexture(keyFrame, new CancellationTokenSource(),
             (st) =>
             {
                 sibr.StartFrom(self, st);

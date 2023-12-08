@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using System.IO;
 using System;
 using UnityEngine.Networking;
-using System.Linq;
+using UnityEngine.SceneManagement;
 
 public class MaxstSceneManager : MonoBehaviour
 {
@@ -22,7 +22,7 @@ public class MaxstSceneManager : MonoBehaviour
 
 	public bool isOcclusion = true;
 	private string currentLocalizerLocation = "";
-	private int currentLocalizerPlaceId = -1;
+	private string currentLocalizerSpaceId = "";
 
 	public PovController startPov;
 	public GameObject arContent;
@@ -35,8 +35,11 @@ public class MaxstSceneManager : MonoBehaviour
 	private List<GameObject> arrowItems = new List<GameObject>();
 	public float arrowVisibleDistance = 20.0f;
 
+	private bool isARMode = false;
+
 	void Awake()
 	{
+		isARMode = XRStudioController.Instance.ARMode;
 		QualitySettings.vSyncCount = 0;
 		Application.targetFrameRate = 60;
 
@@ -70,7 +73,7 @@ public class MaxstSceneManager : MonoBehaviour
 			}
 		}
 
-		if (XRStudioController.Instance.ARMode)
+		if (isARMode)
 		{
 			AndroidRuntimePermissions.Permission[] result = AndroidRuntimePermissions.RequestPermissions("android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.CAMERA", "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION");
 			if (result[0] == AndroidRuntimePermissions.Permission.Granted && result[1] == AndroidRuntimePermissions.Permission.Granted)
@@ -102,7 +105,7 @@ public class MaxstSceneManager : MonoBehaviour
 
 	void Start()
 	{
-		if(XRStudioController.Instance.ARMode)
+		if(isARMode)
         {
 			if (isOcclusion)
 			{
@@ -162,28 +165,28 @@ public class MaxstSceneManager : MonoBehaviour
 					TrackerManager.GetInstance().RequestARCoreApk();
 				}
 			}
+		    string xrsdk_address = "https://alpha-api.maxst.com/vps/v1/location";
+			TrackerManager.GetInstance().ReplaceServerIP("{\"vps_server_ip\":\"" + xrsdk_address + "\"}");
+			TrackerManager.GetInstance().StartTracker();
+			
 		}
-		
-		TrackerManager.GetInstance().StartTracker();
 	}
 
 	void Update()
 	{
+		//if (Input.GetKeyDown(KeyCode.Escape))
+		//{
+		//	SceneManager.LoadScene("Home");
+		//	return;
+		//}
 		//UpdateVisibleArrow(arCamera);
 
-		if (!XRStudioController.Instance.ARMode)
+		if (!isARMode)
         {
 			return;
         }
 
-		if (Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.WindowsEditor)
-		{
-			TrackerManager.GetInstance().UpdateFrame(false);
-		}
-		else
-		{
-			TrackerManager.GetInstance().UpdateFrame(true);
-		}
+		TrackerManager.GetInstance().UpdateFrame(false);
 
 		ARFrame arFrame = TrackerManager.GetInstance().GetARFrame();
 
@@ -220,7 +223,7 @@ public class MaxstSceneManager : MonoBehaviour
 						if (currentLocalizerLocation == eachLocation)
 						{
 							isLocationInclude = true;
-							currentLocalizerPlaceId = eachTrackable.placeId;
+							currentLocalizerSpaceId = eachTrackable.spaceId;
 							break;
 						}
 					}
@@ -241,7 +244,7 @@ public class MaxstSceneManager : MonoBehaviour
 
 	void OnApplicationPause(bool pause)
 	{
-		if (XRStudioController.Instance.ARMode)
+		if (isARMode)
 		{
 			if (pause)
 			{
@@ -278,9 +281,13 @@ public class MaxstSceneManager : MonoBehaviour
 
 	void OnDestroy()
 	{
-		CameraDevice.GetInstance().Stop();
-		TrackerManager.GetInstance().StopTracker();
-		TrackerManager.GetInstance().DestroyTracker();
+		if (isARMode)
+		{
+			CameraDevice.GetInstance().Stop();
+			TrackerManager.GetInstance().StopTracker();
+			TrackerManager.GetInstance().DestroyTracker();
+		}
+		
 	}
 
 	public void OnClickGetPOI()
@@ -291,7 +298,7 @@ public class MaxstSceneManager : MonoBehaviour
         {
             VPSTrackable eachTrackable = vPSTrackablesList[0];
 
-            POIController.GetPOI(this, XRAPI.Instance.GetHeaders(), XRAPI.Instance.GetApplicationKey(), eachTrackable.placeId, success: (pois) =>
+            POIController.GetPOI(this, XRAPI.Instance.GetAccessToken(), eachTrackable.spaceId, success: (pois) =>
             {
                 poiDatas.AddRange(pois);
                 GameObject poiGameObject = new GameObject();
@@ -320,9 +327,9 @@ public class MaxstSceneManager : MonoBehaviour
             return;
         }
 
-        if (currentLocalizerPlaceId > 0)
+        if (currentLocalizerSpaceId != "")
         {
-            POIController.GetPOI(this, XRAPI.Instance.GetHeaders(), XRAPI.Instance.GetApplicationKey(), currentLocalizerPlaceId, success: (pois) =>
+            POIController.GetPOI(this, XRAPI.Instance.GetAccessToken(), currentLocalizerSpaceId, success: (pois) =>
             {
                 poiDatas.AddRange(pois);
                 GameObject poiGameObject = new GameObject();
@@ -349,14 +356,13 @@ public class MaxstSceneManager : MonoBehaviour
 
             });
         }
-
     }
 
-	public void OnClickNavigation()
+    public void OnClickNavigation()
     {
 		RemovePaths();
 
-		if(XRAPI.Instance.spotData == null || XRAPI.Instance.placeData == null || XRAPI.Instance.placeData.place_unique_name == "" || XRAPI.Instance.spotData.vps_spot_name == "")
+		if(XRAPI.Instance.spaceId == null)
         {
 			Debug.LogError("Can't Find Spot, Place Name");
 			return;
@@ -365,14 +371,13 @@ public class MaxstSceneManager : MonoBehaviour
 		if (!XRStudioController.Instance.ARMode)
 		{
 			VPSTrackable eachTrackable = vPSTrackablesList[0];
-			NavigationController.FindPath(this, XRAPI.Instance.GetHeaders(), XRAPI.Instance.spotData.vps_spot_name, 
-				arCamera.transform.position, XRAPI.Instance.spotData.vps_spot_name, new Vector3(11.82481f, 0f, 5.36951f), 2.0f,
+			NavigationController.FindPath(this, XRAPI.Instance.GetAccessToken(), XRAPI.Instance.spaceId, arCamera.transform.position, XRAPI.Instance.spaceId, new Vector3(11.82481f, 0f, 5.36951f), 2.0f, vPSTrackablesList.ToArray(),
 				(paths) => {
 					MakeNavigationArrowContent(paths);
 				},
 				() => {
 					Debug.LogError("No Path");
-				}, XRAPI.Instance.placeData.place_unique_name);
+				}, XRAPI.Instance.spaceId);
 			return;
 		}
 
@@ -393,53 +398,72 @@ public class MaxstSceneManager : MonoBehaviour
 
 			if (trackingObject != null)
 			{
-				
-				NavigationController.FindPath(this, XRAPI.Instance.GetHeaders(), XRAPI.Instance.spotData.vps_spot_name, arCamera.transform.position, 
-					XRAPI.Instance.spotData.vps_spot_name, new Vector3(11.82481f, 0f, 5.36951f), 2.0f,
+				NavigationController.FindPath(this, XRAPI.Instance.GetAccessToken(), XRAPI.Instance.spaceId, arCamera.transform.position, XRAPI.Instance.spaceId, new Vector3(11.82481f, 0f, 5.36951f), 2.0f, vPSTrackablesList.ToArray(),
 				(paths) => {
 					MakeNavigationArrowContent(paths);
 				},
 				() => {
 					Debug.LogError("No Path");
-				}, XRAPI.Instance.placeData.place_unique_name);
-				
+				}, XRAPI.Instance.spaceId);
 			}
 		}
 	}
 
-	private void MakeNavigationArrowContent(Dictionary<string, List<PathModel>> paths)
+	private void MakeNavigationArrowContent(Dictionary<string, PathModel[]> paths)
     {
-		foreach(string eachTrackableName in paths.Keys)
-        {
-			foreach (VPSTrackable eachTrackable in vPSTrackablesList)
+		//foreach(string eachTrackableName in paths.Keys)
+		//      {
+		//	foreach (VPSTrackable eachTrackable in vPSTrackablesList)
+		//	{
+		//		foreach(string placeName in eachTrackable.localizerLocation)
+		//              {
+		//			if(placeName.Contains(eachTrackableName))
+		//                  {
+		//				GameObject naviGameObject = new GameObject();
+		//				naviGameObject.name = "Navigation";
+		//				naviGameObject.transform.position = new Vector3(0, 0, 0);
+		//				naviGameObject.transform.eulerAngles = new Vector3(0, 0, 0);
+		//				naviGameObject.transform.localScale = new Vector3(1, 1, 1);
+
+		//				naviGameObject.transform.parent = eachTrackable.transform;
+
+		//				PathModel[] eachPaths = paths[eachTrackableName];
+		//				for (int i = 1; i < eachPaths.Length - 2; i++)
+		//				{
+		//					GameObject arrowGameObject = Instantiate(arrowPrefab);
+		//					arrowGameObject.transform.position = eachPaths[i].position;
+		//					arrowGameObject.transform.eulerAngles = arrowGameObject.transform.eulerAngles + eachPaths[i].rotation.eulerAngles;
+		//					arrowGameObject.transform.parent = naviGameObject.transform;
+		//					arrowGameObject.name = "arrow" + i;
+
+		//					arrowItems.Add(arrowGameObject);
+		//				}
+
+		//				break;
+		//			}
+		//              }
+		//	}
+		//}
+		foreach (string eachTrackableName in paths.Keys)
+		{
+			GameObject naviGameObject = new GameObject();
+			naviGameObject.name = "Navigation";
+			naviGameObject.transform.position = new Vector3(0, 0, 0);
+			naviGameObject.transform.eulerAngles = new Vector3(0, 0, 0);
+			naviGameObject.transform.localScale = new Vector3(1, 1, 1);
+
+			naviGameObject.transform.parent = arContent.transform;
+
+			PathModel[] eachPaths = paths[eachTrackableName];
+			for (int i = 1; i < eachPaths.Length - 2; i++)
 			{
-				foreach(string placeName in eachTrackable.localizerLocation)
-                {
-					if(placeName.Contains(eachTrackableName))
-                    {
-						GameObject naviGameObject = new GameObject();
-						naviGameObject.name = "Navigation";
-						naviGameObject.transform.position = new Vector3(0, 0, 0);
-						naviGameObject.transform.eulerAngles = new Vector3(0, 0, 0);
-						naviGameObject.transform.localScale = new Vector3(1, 1, 1);
+				GameObject arrowGameObject = Instantiate(arrowPrefab);
+				arrowGameObject.transform.position = eachPaths[i].position;
+				arrowGameObject.transform.eulerAngles = arrowGameObject.transform.eulerAngles + eachPaths[i].rotation.eulerAngles;
+				arrowGameObject.transform.parent = naviGameObject.transform;
+				arrowGameObject.name = "arrow" + i;
 
-						naviGameObject.transform.parent = eachTrackable.transform;
-
-						var eachPaths = paths[eachTrackableName];
-						for (int i = 1; i < eachPaths.Count - 2; i++)
-						{
-							GameObject arrowGameObject = Instantiate(arrowPrefab);
-							arrowGameObject.transform.position = eachPaths[i].position;
-							arrowGameObject.transform.eulerAngles = arrowGameObject.transform.eulerAngles + eachPaths[i].rotation.eulerAngles;
-							arrowGameObject.transform.parent = naviGameObject.transform;
-							arrowGameObject.name = "arrow" + i;
-
-							arrowItems.Add(arrowGameObject);
-						}
-
-						break;
-					}
-                }
+				arrowItems.Add(arrowGameObject);
 			}
 		}
 	}

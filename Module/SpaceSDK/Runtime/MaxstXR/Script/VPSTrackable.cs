@@ -5,7 +5,5 @@ using UnityEngine;
 public class VPSTrackable : MonoBehaviour
 {
     public List<string> localizerLocation;
-    public string navigationLocation;
-    public int placeId;
-    public int spotId;
+    public string spaceId;
 }

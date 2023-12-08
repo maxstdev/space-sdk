@@ -42,7 +42,8 @@ public partial class KnnManager : MonoBehaviour
 
     public GameObject[] FindNearestK(Transform scope, float3 queryPosition, int k)
     {
-        var knnPoints = scope.GetComponentsInChildren<KnnPoint>();
+        var knnPoints = scope.GetComponentsInChildren<KnnPoint>(true);
+
         return FindNearestK(knnPoints, queryPosition, k);
     }
 

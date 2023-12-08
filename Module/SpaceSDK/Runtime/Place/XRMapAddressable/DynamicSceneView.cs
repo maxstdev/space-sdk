@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using MaxstUtils;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,8 +19,10 @@ namespace MaxstXR.Place
     {
         GameObject ShowProgress(int progressType);
         GameObject ShowBackgoundProgress(int progressType);
+        GameObject ShowSpaceList(List<Space> spaces);
         GameObject ShowPlaceList(List<Place> places);
         UniTask<Place> SelectPlaceAsync(PlaceList placeList, List<Place> places);
+        UniTask<Space> SelectSpaceAsync(SpaceList spaceList, List<Space> spaces);
         GameObject ShowSpotList(List<Spot> spots);
         UniTask<Spot> SelectSpotAsync(SpotList spotList, List<Spot> places);
     }
@@ -29,8 +32,9 @@ namespace MaxstXR.Place
         public static DynamicSceneView Instance(GameObject go) => Instance<DynamicSceneView>(go);
 
         [SerializeField] private GameObject progressPrefeb;
-        [SerializeField] private GameObject placesPrefeb;
+        [SerializeField] private GameObject spacePrefeb;
         [SerializeField] private GameObject spotsPrefeb;
+        [SerializeField] private GameObject placePrefeb;
 
         public virtual GameObject ShowProgress(int progressType)
         {
@@ -46,11 +50,24 @@ namespace MaxstXR.Place
             return go;
         }
 
-        public virtual GameObject ShowPlaceList(List<Place> places)
+        public virtual GameObject ShowSpaceList(List<Space> spaces)
         {
-            var go = Instantiate(placesPrefeb, GetComponentInParent<Canvas>().transform);
+            var go = Instantiate(spacePrefeb, GetComponentInParent<Canvas>().transform);
             return go;
         }
+
+        public virtual async UniTask<Space> SelectSpaceAsync(SpaceList spaceList, List<Space> spaces)
+        {
+            var completionSource = new TaskCompletionSource<Space>();
+
+            spaceList.Config(spaces, p =>
+            {
+                completionSource.TrySetResult(p);
+            });
+
+            return await completionSource.Task;
+        }
+
 
         public virtual async UniTask<Place> SelectPlaceAsync(PlaceList placeList, List<Place> places)
         {
@@ -80,6 +97,12 @@ namespace MaxstXR.Place
             });
 
             return await completionSource.Task;
+        }
+
+        public GameObject ShowPlaceList(List<Place> places)
+        {
+            var go = Instantiate(placePrefeb, GetComponentInParent<Canvas>().transform);
+            return go;
         }
     }
 }

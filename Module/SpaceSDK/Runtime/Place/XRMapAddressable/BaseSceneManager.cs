@@ -210,32 +210,33 @@ namespace MaxstXR.Place
             //TrackerManager.GetInstance().StartTracker();
             //if (isLgSpot) TrackerManager.GetInstance().AddTrackerData("{\"vps_server\":\"p0000_m0011_lgseocho\"}");
             //}
-            StartTrackerWhenPlaceConfigured();
+            StartTrackerWhenSpaceConfigured();
         }
 
-        private void StartTrackerWhenPlaceConfigured()
+        private void StartTrackerWhenSpaceConfigured()
         {
             if (trackerStatus == TrackerStatus.TrackingStart)
             {
                 return;
             }
 
-            if (SceneViewModel.CurrentPlace != null)
-		    {
-			    trackerStatus = TrackerStatus.TrackingStart;
+            var key = SceneViewModel.CurrentMapKey();
+            if (string.IsNullOrEmpty(key))
+            {
+                trackerStatus = TrackerStatus.TrackingStart;
                 if (XRStudio.GetComponent<XRStudioController>().ARMode)
                 {
-                    TrackerManager.GetInstance().StartTrackerAtPlace((int)SceneViewModel.CurrentPlace.placeId);
+                    TrackerManager.GetInstance().StartTrackerAtSpace(key);
                 }
-			    SubscribeToken();
-			    //TrackerManager.GetInstance().SetSecretIdSecretKey(XRAPI.secretId, XRAPI.secretKey);
-			    Debug.Log(">>> BaseSceneManager.StartTrackerAtPlace : " + SceneViewModel.CurrentPlace.placeId);
-		    }
-		    else
-		    {
-			    trackerStatus = TrackerStatus.TrackingStartDelayed;
-			    Debug.Log(">>> BaseSceneManager.StartTrackerAtPlace : " + TrackerStatus.TrackingStartDelayed);
-		    }
+                SubscribeToken();
+                //TrackerManager.GetInstance().SetSecretIdSecretKey(XRAPI.secretId, XRAPI.secretKey);
+                Debug.Log(">>> BaseSceneManager.StartTrackerAtSpace : " + key);
+            }
+            else
+            {
+                trackerStatus = TrackerStatus.TrackingStartDelayed;
+                Debug.Log(">>> BaseSceneManager.StartTrackerAtSpace : " + TrackerStatus.TrackingStartDelayed);
+            }
         }
 
         protected void StartTrackerWithRefreshSubscribe()
@@ -244,10 +245,47 @@ namespace MaxstXR.Place
             trackerStatus = TrackerStatus.TrackingStart;
             if (XRStudio.GetComponent<XRStudioController>().ARMode)
             {
-                TrackerManager.GetInstance().StartTrackerAtPlace((int)SceneViewModel.CurrentPlace.placeId);
+                TrackerManager.GetInstance().StartTrackerAtSpace(SceneViewModel.CurrentMapKey());
             }
             SubscribeToken();
         }
+
+        //  private void StartTrackerWhenPlaceConfigured()
+        //  {
+        //      if (trackerStatus == TrackerStatus.TrackingStart)
+        //      {
+        //          return;
+        //      }
+
+        //      if (SceneViewModel.CurrentPlace != null)
+        //{
+        // trackerStatus = TrackerStatus.TrackingStart;
+        //          if (XRStudio.GetComponent<XRStudioController>().ARMode)
+        //          {
+        //              TrackerManager.GetInstance().StartTrackerAtPlace((int)SceneViewModel.CurrentPlace.placeId);
+        //          }
+        // SubscribeToken();
+        // //TrackerManager.GetInstance().SetSecretIdSecretKey(XRAPI.secretId, XRAPI.secretKey);
+        // Debug.Log(">>> BaseSceneManager.StartTrackerAtPlace : " + SceneViewModel.CurrentPlace.placeId);
+        //}
+        //else
+        //{
+        // trackerStatus = TrackerStatus.TrackingStartDelayed;
+        // Debug.Log(">>> BaseSceneManager.StartTrackerAtPlace : " + TrackerStatus.TrackingStartDelayed);
+        //}
+        //  }
+
+        //protected void StartTrackerWithRefreshSubscribe()
+        //{
+        //    UnsubscribeToken();
+        //    trackerStatus = TrackerStatus.TrackingStart;
+        //    if (XRStudio.GetComponent<XRStudioController>().ARMode)
+        //    {
+        //        TrackerManager.GetInstance().StartTrackerAtPlace((int)SceneViewModel.CurrentPlace.placeId);
+        //    }
+        //    SubscribeToken();
+        //}
+        
 
         protected void StopTracker(bool cameraStop = true)
         {
@@ -369,7 +407,7 @@ namespace MaxstXR.Place
                                 currentLocalizerLocation = localizerLocation;
                                 XrSettings.LocalizerLocation.Value = localizerLocation;
                                 XrSettings.OldNavigationLocation.Value = XrSettings.NavigationLocation.Value;
-                                XrSettings.NavigationLocation.Value = eachTrackable.navigationLocation;
+                                XrSettings.NavigationLocation.Value = eachTrackable.spaceId;
                                 //Debug.Log("UpdateARMode : " + localizerLocation);
                                 break;
                             }
@@ -413,7 +451,7 @@ namespace MaxstXR.Place
                 currentLocalizerLocation = localizerLocation;
                 XrSettings.LocalizerLocation.Value = localizerLocation;
                 XrSettings.OldNavigationLocation.Value = XrSettings.NavigationLocation.Value;
-                XrSettings.NavigationLocation.Value = activeVPSTrackable.navigationLocation;
+                XrSettings.NavigationLocation.Value = activeVPSTrackable.spaceId;
                 WorldContent.SetActive(true);
                 MinimapContent.SetActive(true);
             }
@@ -566,10 +604,9 @@ namespace MaxstXR.Place
             //XRViewModel.InitRecognitionState.RemoveAllObserver(this);
         }
 
-        private void OnPlaceUpdate(Place place)
+        private void OnSpaceUpdate(Space space)
         {
-            //if (!CustomerRepo.currentPlace.IsNew) return;
-            if (place == null) return;
+            if (space == null) return;
 
             switch (trackerStatus)
             {
@@ -585,6 +622,26 @@ namespace MaxstXR.Place
             }
             //XRAPIUtil.ConfigPlace(place);
         }
+
+        //private void OnPlaceUpdate(Place place)
+        //{
+        //    //if (!CustomerRepo.currentPlace.IsNew) return;
+        //    if (place == null) return;
+
+        //    switch (trackerStatus)
+        //    {
+        //        case TrackerStatus.TrackingStart:
+        //            StopTracker();
+        //            StartTracker();
+        //            break;
+        //        case TrackerStatus.TrackingStartDelayed:
+        //            StartTracker();
+        //            break;
+        //        default:
+        //            break;
+        //    }
+        //    //XRAPIUtil.ConfigPlace(place);
+        //}
 
         private void OnSpotUpdate(Spot spot)
         {

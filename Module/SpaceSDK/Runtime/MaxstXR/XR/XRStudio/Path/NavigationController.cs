@@ -4,9 +4,6 @@ using UnityEngine;
 using System;
 using maxstAR;
 using JsonFx.Json;
-using MaxstXR.Place;
-using UniRx;
-using UnityEngine.SceneManagement;
 
 //#if UNITY_EDITOR
 //using Unity.EditorCoroutines.Editor;
@@ -14,91 +11,67 @@ using UnityEngine.SceneManagement;
 
 public class NavigationController : MonoBehaviour
 {
-    private static string pathURL = XRAPI.apiURL + "/v1/vps/path";
+    private static string pathURL = XRAPI.naviURL;
 
     public float arrowPathHeight = -0.5f;
 
-    static public void FindPath(MonoBehaviour monoBehaviour, Dictionary<string, string> headers, 
-        string startLocation, Vector3 startPosition, 
-        string endLocation, Vector3 endPosition, 
-        float distance, 
-        Action<Dictionary<string, List<PathModel>>> success, Action fail, 
-        string placeUnamePiece = "", bool isOptimize = true)
+    static public void FindPath(MonoBehaviour monoBehaviour, string accessToken, string startLocation, Vector3 startPosition, string endLocation, Vector3 endPosition, float distance, VPSTrackable[] trackables, Action<Dictionary<string, PathModel[]>> success, Action fail, string serverName = "")
     {
+        Dictionary<string, string> headers = new Dictionary<string, string>()
+        {
+            { "Authorization", "Bearer " + accessToken},
+            { "Content-Type", "application/json"}
+        };
+
         string startPositionString = startPosition.x + "," + startPosition.z + "," + startPosition.y;
         string endPositionString = endPosition.x + "," + endPosition.z + "," + endPosition.y;
-        var parameters = new Dictionary<string, string>()
+        Dictionary<string, string> parameters = new Dictionary<string, string>()
         {
             { "start_location", startLocation },
             { "start_position", startPositionString},
             { "end_location", endLocation },
             { "end_position", endPositionString},
-            { "placeUnamePiece", placeUnamePiece}
+            { "placeUnamePiece", serverName}
         };
 
-#if DEBUG_DETAIL
-        Debug.Log($"FindPath start_location : {startLocation}");
-        Debug.Log($"FindPath start_position : {startPositionString}");
-        Debug.Log($"FindPath end_location : {endLocation}");
-        Debug.Log($"FindPath end_position : {endPositionString}");
-        Debug.Log($"FindPath placeUnamePiece : {placeUnamePiece}");
-#endif
-        monoBehaviour.StartCoroutine(APIController.POST(XRAPI.naviURL + "/v1/path", headers, parameters, 5, (resultString) =>
+        monoBehaviour.StartCoroutine(APIController.POST(pathURL, headers, parameters, 5, (resultString) =>
         {
-            //Debug.Log($"FindPath {pathURL + "/v1/path"}, resultString : {resultString}");
-            if (!string.IsNullOrEmpty(resultString))
+            Debug.Log(resultString);
+            if (resultString != null && resultString != "")
             {
-                try
+                PathModel[] paths = JsonReader.Deserialize<PathModel[]>(resultString);
+                Dictionary<string, List<PathModel>> pathDictionary = new Dictionary<string, List<PathModel>>();
+                foreach (PathModel eachPathModel in paths)
                 {
-                    var paths = JsonReader.Deserialize<PathModel[]>(resultString);
-                    var pathDictionary = new Dictionary<string, List<PathModel>>();
-                    foreach (PathModel eachPathModel in paths)
+                    if (!pathDictionary.ContainsKey(eachPathModel.location))
                     {
-                        if (!pathDictionary.ContainsKey(eachPathModel.location))
-                        {
-                            pathDictionary[eachPathModel.location] = new List<PathModel>();
-                        }
-                        List<PathModel> pathList = pathDictionary[eachPathModel.location];
-                        if (pathList == null)
-                        {
-                            pathList = new List<PathModel>();
-                        }
-                        pathList.Add(eachPathModel);
+                        pathDictionary[eachPathModel.location] = new List<PathModel>();
                     }
+                    List<PathModel> pathList = pathDictionary[eachPathModel.location];
+                    if (pathList == null)
+                    {
+                        pathList = new List<PathModel>();
+                    }
+                    pathList.Add(eachPathModel);
+                }
 
-                    var returnPathDictionary = new Dictionary<string, List<PathModel>>();
-                    foreach (string eachLocation in pathDictionary.Keys)
-                    {
-                        List<PathModel> eachPaths = pathDictionary[eachLocation];
-                        if (isOptimize)
-                        {
-                            var optimization = MakeOptimizePath(eachPaths.ToArray(), distance);
-                            returnPathDictionary[eachLocation] = optimization;
-                        }
-                        else
-                        {
-                            returnPathDictionary[eachLocation] = eachPaths;
-                        }
-                    }
-                    success(returnPathDictionary);
-                    XRAPI.Instance.SendLog(XRAPI.Operation.Navigation, true);
-                }
-                catch(Exception e)
+                Dictionary<string, PathModel[]> returnPathDictionary = new Dictionary<string, PathModel[]>();
+                foreach (string eachLocation in pathDictionary.Keys)
                 {
-                    Debug.Log($"FindPath Error {e}");
-                    fail();
-                    XRAPI.Instance.SendLog(XRAPI.Operation.Navigation, false);
+                    List<PathModel> eachPaths = pathDictionary[eachLocation];
+                    PathModel[] optimization = MakeOptimizePath(eachPaths.ToArray(), distance);
+                    returnPathDictionary[eachLocation] = optimization;
                 }
+                success(returnPathDictionary);
             }
             else
             {
                 fail();
-                XRAPI.Instance.SendLog(XRAPI.Operation.Navigation, false);
             }
         }));
     }
 
-    static private List<PathModel> MakeOptimizePath(PathModel[] paths, float distance)
+    static private PathModel[] MakeOptimizePath(PathModel[] paths, float distance)
     {
         List<PathModel> returnPathModel = new List<PathModel>();
         List<Vector3> vectors = new List<Vector3>();
@@ -134,7 +107,7 @@ public class NavigationController : MonoBehaviour
             returnPathModel.Add(pathModel);
         }
 
-        return returnPathModel;
+        return returnPathModel.ToArray();
     }
 
     static private Vector3 DivideBetweenTwoPoints(in Vector3 from, in Vector3 to, double ratio)

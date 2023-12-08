@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using MaxstXR.Place;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -168,16 +169,22 @@ namespace MaxstXR.Extension
         private async void Reload(PovController nextPovController, Quaternion rotation)
         {
             if (!nextPovController) return;
+            var keyFrame = new PovKeyFrame(nextPovController, nextPovController, rotation, rotation)
+            {
+                KeyFrameSource = KeyFrameSource.LifeCycle,
+                DurationTimeAtPos = DefaultSecondAtPos,
+                DurationTimeAtRotate = DefaultSecondAtRotate,
+            };
 
             povController = nextPovController;
             // move the camera to the nearest pov
             transform.SetPositionAndRotation(nextPovController.transform.position, rotation);
 
-            var _ = await TextureManager.LoadTexture(nextPovController, new CancellationTokenSource(),
+            var _ = await TextureManager.LoadTexture(keyFrame, new CancellationTokenSource(),
                 (st) =>
                 {
                     IbrManager.StartFromRealTime(nextPovController, st);
-                    UpdateRealTimePov(povController, nextPovController, rotation, rotation, DefaultSecondAtPos, DefaultSecondAtRotate, PovType.Primary);
+                    UpdateRealTimePov(keyFrame, PovType.Primary);
                 });
         }
 
@@ -206,19 +213,22 @@ namespace MaxstXR.Extension
                 return;
             }
 
-            var transition = GenerateTransition(currentPovController, nextPovController,
-                transform.rotation, transform.rotation,
-                DefaultSecondAtPos, DefaultSecondAtRotate,
-                new CancellationTokenSource(), transitionDelegate);
+            var keyFrame = new PovKeyFrame(currentPovController, nextPovController, transform.rotation, transform.rotation)
+            {
+                KeyFrameSource = KeyFrameSource.Keyboard,
+                DurationTimeAtPos = DefaultSecondAtPos,
+                DurationTimeAtRotate = DefaultSecondAtRotate,
+            };
+
+            var transition = GenerateTransition(keyFrame, new CancellationTokenSource(), transitionDelegate);
             if (transition == null)
             {
                 //Debug.Log($"HandleMouseNavigation transition is null : {transitions.Count}");
                 return;
             }
-            transition.SourceObject = transitionDelegate;
 
             povController = nextPovController;
-            HandleLoad2kImage(nextPovController, transition.cancellation,
+            HandleLoad2kImage(keyFrame, transition.cancellation,
                 (t) =>
                 {
                     transition.sharedTexture = t.Retain();
@@ -268,19 +278,21 @@ namespace MaxstXR.Extension
 
             var durationTimeAtPos = Vector3.Distance(currentPovController.transform.position, nextPovController.transform.position) / DistancePerSecond;
             var durationTimeAtRotate = Quaternion.Angle(transform.rotation, transform.rotation) / RotatePerSecond;
-
-            var transition = GenerateTransition(currentPovController, nextPovController,
-                transform.rotation, transform.rotation,
-                durationTimeAtPos, durationTimeAtRotate,
-                new CancellationTokenSource(), transitionDelegate);
+            var keyFrame = new PovKeyFrame(currentPovController, nextPovController, transform.rotation, transform.rotation)
+            {
+                KeyFrameSource = KeyFrameSource.Keyboard,
+                DurationTimeAtPos = durationTimeAtPos,
+                DurationTimeAtRotate = durationTimeAtRotate,
+            };
+            var transition = GenerateTransition(keyFrame, new CancellationTokenSource(), transitionDelegate);
             if (transition == null)
             {
                 //Debug.Log($"HandleKeyboardNavigation transition is null : {transitions.Count}");
                 return;
             }
-            transition.SourceObject = transitionDelegate;
+
             povController = nextPovController;
-            HandleLoad2kImage(nextPovController, transition.cancellation,
+            HandleLoad2kImage(keyFrame, transition.cancellation,
                 (t) =>
                 {
                     transition.sharedTexture = t.Retain();
@@ -295,10 +307,6 @@ namespace MaxstXR.Extension
             //Debug.Log($"HandlePovKeyFrame : {keyFrame.CurrentPov.Name}/{keyFrame.NextPov.Name}");
             PovController currentPovController = keyFrame.CurrentPov;
             PovController nextPovController = keyFrame.NextPov;
-            var durationTimeAtPos = keyFrame.DurationTimeAtPos == 0f ?
-                Vector3.Distance(keyFrame.CurrentPosition, keyFrame.NextPosition) / DistancePerSecond : keyFrame.DurationTimeAtPos;
-            var durationTimeAtRotate = keyFrame.DurationTimeAtRotate == 0f ?
-                Quaternion.Angle(keyFrame.CurrentRotate, keyFrame.NextRotate) / RotatePerSecond : keyFrame.DurationTimeAtRotate;
 
             if (keyFrame.KeyFrameType == KeyFrameType.Wrap
                 || keyFrame.KeyFrameType == KeyFrameType.WrapWith8K)
@@ -306,20 +314,16 @@ namespace MaxstXR.Extension
                 IbrManager.SetPov(nextPovController.GetComponent<IPov>(), PovType.Primary);
             }
             //Debug.Log($"HandlePovKeyFrame time : {durationTimeAtPos}/{durationTimeAtRotate}/{keyFrame.DurationTimeAtPos}/{keyFrame.DurationTimeAtRotate}");
-            var transition = GenerateTransition(currentPovController, nextPovController,
-                keyFrame.CurrentRotate, keyFrame.NextRotate,
-                durationTimeAtPos, durationTimeAtRotate, 
-                new CancellationTokenSource(), transitionDelegate,
-                keyFrame.GetHighQualityState());
+            var transition = GenerateTransition(keyFrame, new CancellationTokenSource(), transitionDelegate, keyFrame.GetHighQualityState());
+            
             if (transition == null)
             {
                 //Debug.Log($"HandlePovKeyFrame transition is null : {transitions.Count}");
                 return;
             }
 
-            transition.SourceObject = keyFrame;
             povController = nextPovController;
-            HandleLoad2kImage(nextPovController, transition.cancellation,
+            HandleLoad2kImage(keyFrame, transition.cancellation,
                 (t) =>
                 {
                     transition.sharedTexture = t.Retain();
@@ -334,12 +338,12 @@ namespace MaxstXR.Extension
             if (CurrentState != State.Idle) return;
             float directionModifier = RotationDirection ? -1f : 1f;
 #if UNITY_EDITOR
-            transform.Rotate(0f, directionModifier * Input.GetAxis("Mouse X") * EditorRotateSpeed, 0f, Space.World);
-            transform.Rotate(-directionModifier * Input.GetAxis("Mouse Y") * EditorRotateSpeed, 0f, 0f, Space.Self);
+            transform.Rotate(0f, directionModifier * Input.GetAxis("Mouse X") * EditorRotateSpeed, 0f, UnityEngine.Space.World);
+            transform.Rotate(-directionModifier * Input.GetAxis("Mouse Y") * EditorRotateSpeed, 0f, 0f, UnityEngine.Space.Self);
 
 #else
-            transform.Rotate(0f, directionModifier * Input.GetAxis("Mouse X") * RotateSpeed, 0f, Space.World);
-            transform.Rotate(-directionModifier * Input.GetAxis("Mouse Y") * RotateSpeed, 0f, 0f, Space.Self);
+            transform.Rotate(0f, directionModifier * Input.GetAxis("Mouse X") * RotateSpeed, 0f, UnityEngine.Space.World);
+            transform.Rotate(-directionModifier * Input.GetAxis("Mouse Y") * RotateSpeed, 0f, 0f, UnityEngine.Space.Self);
 #endif
             if (adjustAngleX)
             {
@@ -351,30 +355,25 @@ namespace MaxstXR.Extension
             }
         }
 
-        public void UpdateInputKeyRotate(bool isRight = true)
+        public void UpdateInputKeyRotate(int rightDir = 0, int downDir = 0, bool adjustAngleX = true)
         {
             if (CurrentState != State.Idle) return;
 
-            int direction = (isRight ? 1 : -1);
-
 #if UNITY_EDITOR
-            transform.Rotate(0f, (EditorKeyRotateSpeed * direction), 0f, Space.World);
+            if (rightDir != 0) transform.Rotate(0f, (EditorKeyRotateSpeed * rightDir), 0f, UnityEngine.Space.World);
+            if (downDir != 0) transform.Rotate((EditorKeyRotateSpeed * downDir), 0f, 0f, UnityEngine.Space.Self);
 #else
-			transform.Rotate(0f, (EditorKeyRotateSpeed * direction), 0f, Space.World);
+			if (rightDir != 0) transform.Rotate(0f, (RotateSpeed * rightDir), 0f, UnityEngine.Space.World);
+            if (downDir != 0) transform.Rotate((RotateSpeed * downDir), 0f, 0f, UnityEngine.Space.Self);
 #endif
-        }
-
-        public void UpdateInputKeyUpDown(bool isUp = true)
-        {
-            if (CurrentState != State.Idle) return;
-
-            int direction = (isUp ? -1 : 1);
-
-#if UNITY_EDITOR
-            transform.Rotate((EditorKeyRotateSpeed * direction), 0f, 0f, Space.Self);
-#else
-			transform.Rotate((EditorKeyRotateSpeed * direction), 0f, 0f, Space.Self);
-#endif
+            if (adjustAngleX)
+            {
+                var angles = transform.eulerAngles;
+                var symmetricX = Mathf.Asin(Mathf.Sin(Mathf.Deg2Rad * angles.x)) * Mathf.Rad2Deg;
+                angles.x = Mathf.Clamp(symmetricX, -50f, 60f - Camera.fieldOfView / 2f);
+                angles.z = 0;
+                transform.rotation = Quaternion.Euler(angles);
+            }
         }
 
         public void SearchPovNearCursor()
@@ -457,25 +456,23 @@ namespace MaxstXR.Extension
         }
 
         private void UpdateRealTimePov(
-            PovController currentPovController, PovController nextPovController, 
-            Quaternion currentRotation, Quaternion nextRotation,
-            float durationTimeAtPos, float durationTimeAtRotate,
+            PovKeyFrame keyFrame,
+            //PovController currentPovController, PovController nextPovController, 
+            //Quaternion currentRotation, Quaternion nextRotation,
+            //float durationTimeAtPos, float durationTimeAtRotate,
             PovType povType = PovType.Secondary,
             ITransitionDelegate transitionDelegate = null)
         {
             // set the primary pov to ibr manager
-            IbrManager.SetPov(nextPovController.GetComponent<IPov>(), povType);
-            var transition = GenerateTransition(currentPovController, nextPovController, 
-                currentRotation, nextRotation,
-                durationTimeAtPos, durationTimeAtRotate, 
-                new CancellationTokenSource(), transitionDelegate);
+            IbrManager.SetPov(keyFrame.NextPov.GetComponent<IPov>(), povType);
+            var transition = GenerateTransition(keyFrame, new CancellationTokenSource(), transitionDelegate);
             if (transition == null)
             {
                 return;
             }
 
-            povController = nextPovController;
-            HandleLoad2kImage(nextPovController, transition.cancellation,
+            povController = keyFrame.NextPov;
+            HandleLoad2kImage(keyFrame, transition.cancellation,
                 (t) =>
                 {
                     transition.sharedTexture = t.Retain();
@@ -484,10 +481,10 @@ namespace MaxstXR.Extension
                 }, transition.TransitionDelegate);
         }
 
-        private async void HandleLoad2kImage(PovController povController, CancellationTokenSource cancellation,
+        private async void HandleLoad2kImage(PovKeyFrame keyFrame, CancellationTokenSource cancellation,
             UnityAction<SmoothSharedTexture> injectAction, ITransitionDelegate transitionDelegate)
         {
-            var _ = await TextureManager.LoadTexture(povController, cancellation, injectAction, transitionDelegate);
+            var _ = await TextureManager.LoadTexture(keyFrame, cancellation, injectAction, transitionDelegate);
         }
 
 
@@ -506,13 +503,13 @@ namespace MaxstXR.Extension
 
             IbrManager.ClearAllSplitMaterial(false);
             IbrManager.ClearAllTextureMaterial();
-            LoadAndUpdateHighResolution(povController, transition, bounds, complete);
+            LoadAndUpdateHighResolution(transition.KeyFrame, transition, bounds, complete);
         }
 
         private IEnumerator HighResolutionOnMainthread(Transition transition, SmoothSharedTexture st)
         {
             yield return new WaitForEndOfFrame();
-            if (transition.ToPov == povController)
+            if (transition.KeyFrame.NextPov == povController)
             {
                 switch (transition.highQualityState)
                 {
@@ -539,10 +536,10 @@ namespace MaxstXR.Extension
             complete?.Invoke(transition);
         }
 
-        private async void LoadAndUpdateHighResolution(PovController povController,
+        private async void LoadAndUpdateHighResolution(PovKeyFrame keyFrame,
             Transition transition, List<int> bounds, UnityAction<Transition> complete)
         {
-            await TextureManager.LoadTextureBounds(povController, bounds, highQualityHandler.cancellation,
+            await TextureManager.LoadTextureBounds(keyFrame, bounds, highQualityHandler.cancellation,
                 (st) =>
                 {
                     if (this) StartCoroutine(HighResolutionOnMainthread(transition, st));
@@ -632,6 +629,12 @@ namespace MaxstXR.Extension
 
         public void UpdateCursor(RectTransform targetRectTransform = null)
         {
+            if (transitions.Count > 0)
+            {
+                Cursor.gameObject.SetActive(false);
+                return;
+            }
+
             var ray = new Ray();
             int displayIndex = 0;
             float distanceToClipPlane = Camera.farClipPlane;
@@ -654,9 +657,7 @@ namespace MaxstXR.Extension
             Cursor.GetComponent<MeshRenderer>().material.mainTexture = texture;
         }
 
-        private Transition GenerateTransition(PovController fromPov, PovController toPov,
-            Quaternion fromRotation, Quaternion toRotation,
-            float durationTimeAtPos, float durationTimeAtRotate,
+        private Transition GenerateTransition(PovKeyFrame keyFrame,
             CancellationTokenSource cancellation, ITransitionDelegate transitionDelegate, 
             HighQualityState highQualityState = HighQualityState.Download)
         {
@@ -679,10 +680,7 @@ namespace MaxstXR.Extension
 
             //Debug.Log($"GenerateTransition : {durationTimeAtPos}/{durationTimeAtRotate}");
 
-            var transition = new Transition(fromPov, toPov,
-                fromRotation, toRotation,
-                durationTimeAtPos, durationTimeAtRotate,
-                cancellation, transitionDelegate)
+            var transition = new Transition(keyFrame, cancellation, transitionDelegate)
             {
                 highQualityState = highQualityState,
             };
@@ -691,6 +689,7 @@ namespace MaxstXR.Extension
             return transition;
         }
 
+#if false
         private Transition GenerateMinimapMoveTransition(PovController fromPov, PovController toPov,
             Quaternion fromRotation, Quaternion toRotation, CancellationTokenSource cancellation,
             ITransitionDelegate downloadDelegate, bool isLast = false)
@@ -713,7 +712,7 @@ namespace MaxstXR.Extension
 
             return transition;
         }
-
+#endif
         private void UpdateAnimation()
         {
             if (transitions.TryPeek(out var transition))
@@ -741,9 +740,25 @@ namespace MaxstXR.Extension
             if (transition.IsAnimationStart())
             {
                 //Debug.Log($"OnFirstAnimation : {transition.ToPov}/{transition.highQualityState}");
-                HandleTexture(transition.ToPov, transition.sharedTexture);
+                Cursor.gameObject.SetActive(false);
+
+                var currentRotate = transition.KeyFrame.CurrentRotate;
+                var nextRotate = transition.KeyFrame.NextRotate;
+
+                if (!currentRotate.HasValue && !nextRotate.HasValue)
+                {
+                    transition.KeyFrame.UpdateRotate(this.transform.rotation, this.transform.rotation);
+
+                }
+                else if (!currentRotate.HasValue || !nextRotate.HasValue)
+                {
+                    transition.KeyFrame.UpdateRotate(nextRotate ?? this.transform.rotation, currentRotate ?? this.transform.rotation);
+                }
+
+                HandleTexture(transition.KeyFrame.NextPov, transition.sharedTexture);
                 OnAnimationStarted.Invoke();
-                transition.TransitionDelegate?.AnimationStarted(transition.FromPov, transition.SourceObject);
+                transition.KeyFrame.KeyFrameStatus = TransitionStatus.AnimateStarted;
+                transition.TransitionDelegate?.AnimationStarted(transition.KeyFrame);
                 if (transition.highQualityState == HighQualityState.Download)
                 {
                     highQualityHandler.Config(transition, this);
@@ -796,7 +811,8 @@ namespace MaxstXR.Extension
                 var transition = transitions.Dequeue();
                 transition.sharedTexture?.Release();
                 transition.sharedTexture = null;
-                transition.TransitionDelegate?.AnimationFinished(transition.ToPov, transition.SourceObject);
+                transition.KeyFrame.KeyFrameStatus = TransitionStatus.AnimateEnded;
+                transition.TransitionDelegate?.AnimationFinished(transition.KeyFrame);
                 OnAnimationFinished.Invoke();
 #if false
                 if (minimapAutoMove == true)
@@ -905,12 +921,18 @@ namespace MaxstXR.Extension
                 .Select(pair => pair.pov);
         }
 
-        public void WarpToPose(Vector3 nearestPosition, Quaternion nearestRotation)
+        public void WarpToPose(Vector3 nearestPosition, Quaternion nearestRotation, ITransitionDelegate transitionDelegate = null)
         {
             povController = FindNearestPov(nearestPosition);
             if (povController)
             {
-                UpdateRealTimePov(povController, povController, nearestRotation, nearestRotation, DefaultSecondAtPos, DefaultSecondAtRotate, PovType.Primary);
+                var keyFrame = new PovKeyFrame(povController, povController, nearestRotation, nearestRotation)
+                {
+                    KeyFrameSource = KeyFrameSource.ExternalValue,
+                    DurationTimeAtPos = DefaultSecondAtPos,
+                    DurationTimeAtRotate = DefaultSecondAtRotate,
+                };
+                UpdateRealTimePov(keyFrame, PovType.Primary, transitionDelegate);
             }
         }
 
@@ -923,8 +945,13 @@ namespace MaxstXR.Extension
             {
                 var durationTimeAtPos = Vector3.Distance(povController.transform.position, nextPovController.transform.position) / DistancePerSecond;
                 var durationTimeAtRotate = Quaternion.Angle(nearestRotation, nearestRotation) / RotatePerSecond;
-                UpdateRealTimePov(povController, nextPovController, nearestRotation, nearestRotation, 
-                    durationTimeAtPos, durationTimeAtRotate, PovType.Secondary, transitionDelegate);
+                var keyFrame = new PovKeyFrame(povController, nextPovController, nearestRotation, nearestRotation)
+                {
+                    KeyFrameSource = KeyFrameSource.ExternalValue,
+                    DurationTimeAtPos = durationTimeAtPos,
+                    DurationTimeAtRotate = durationTimeAtRotate,
+                };
+                UpdateRealTimePov(keyFrame, PovType.Secondary, transitionDelegate);
                 return true;
             }
             return false;
@@ -939,8 +966,13 @@ namespace MaxstXR.Extension
             {
                 var durationTimeAtPos = Vector3.Distance(povController.transform.position, nextPovController.transform.position) / DistancePerSecond;
                 var durationTimeAtRotate = Quaternion.Angle(povController.transform.rotation, nearestRotation) / RotatePerSecond;
-                UpdateRealTimePov(povController, nextPovController, nearestRotation, nearestRotation,
-                    durationTimeAtPos, durationTimeAtRotate, PovType.Secondary, transitionDelegate);
+                var keyFrame = new PovKeyFrame(povController, nextPovController, nearestRotation, nearestRotation)
+                {
+                    KeyFrameSource = KeyFrameSource.ExternalValue,
+                    DurationTimeAtPos = durationTimeAtPos,
+                    DurationTimeAtRotate = durationTimeAtRotate,
+                };
+                UpdateRealTimePov(keyFrame, PovType.Secondary, transitionDelegate);
                 return true;
             }
             return false;
@@ -962,94 +994,6 @@ namespace MaxstXR.Extension
             }
 
             //defaultRenderMask = Camera.cullingMask;
-        }
-
-        public async UniTask<(PovController, Quaternion)> MinimapMovePov(Vector3 destPosition, PovController startPov, 
-            Quaternion startQuater, bool isLast = false, ITransitionDelegate downloadDelegate = null)
-        {
-            var threshold = 0.0f;
-            var distance = 0.0f;
-
-            var nextPovController = FindNearestPov(destPosition);
-            if (povController == nextPovController)
-            {
-                return (povController, Camera.transform.rotation);
-            }
-
-            distance = Vector3.Distance(startPov.transform.position, destPosition);
-            if (distance < 3.0f)
-            {
-                return (startPov, startQuater);
-            }
-
-            await UniTask.Delay(100);
-
-            Vector3 destPos = new Vector3(nextPovController.transform.position.x, Camera.transform.position.y, nextPovController.transform.position.z);
-            Vector3 startPos = (startPov == null ? Camera.transform.position : new Vector3(startPov.transform.position.x, Camera.transform.position.y, startPov.transform.position.z));
-
-            Vector3 dir = destPos - startPos;// transform.position;
-
-            if (dir == Vector3.zero)
-            {
-                return (nextPovController, startQuater);
-            }
-
-            Quaternion destRot = Quaternion.LookRotation(dir);
-            if (Quaternion.Angle(destRot, startQuater) < threshold)
-            {
-                destRot = startQuater;
-            }
-
-#if true
-            var transition = GenerateMinimapMoveTransition(startPov, nextPovController,
-                (startQuater == null ? transform.rotation : startQuater), destRot, new CancellationTokenSource(), downloadDelegate, isLast);
-            if (transition == null)
-            {
-                return (null, startQuater);
-            }
-
-            HandleLoad2kImage(nextPovController, transition.cancellation,
-                (t) =>
-                {
-                    transition.sharedTexture = t.Retain();
-                    transition.isReady = true;
-                    //Debug.Log("UpdateRealTimePov HandleLoad2kImage complete");
-                }, transition.TransitionDelegate);
-#else
-            UpdateRealTimePov(nextPovController, destRot);
-#endif
-            //await UniTask.WaitUntil(() => transition.isReady == true);
-
-            return (nextPovController, destRot);
-        }
-
-
-        public async UniTask RotatePov(PovController startPov,
-            Quaternion startQuaternion,
-            Quaternion endQuaternion,
-            bool isLookAround,
-            bool isLast = false)
-        {
-#if true
-            var transition = GenerateMinimapMoveTransition(startPov, startPov,
-                startQuaternion, endQuaternion, new CancellationTokenSource(), null, isLast);
-
-            //transition.isReady = true;
-            HandleLoad2kImage(startPov, transition.cancellation,
-            (t) =>
-            {
-                transition.sharedTexture = t.Retain();
-                transition.isReady = true;
-                //transition.duration = 7.0f;
-                //transition.isSequenceRotation = isLookAround;
-                //Debug.Log("UpdateRealTimePov HandleLoad2kImage complete");
-            }, transition.TransitionDelegate);
-
-            if (transition == null)
-            {
-                return;
-            }
-#endif
         }
 
     }

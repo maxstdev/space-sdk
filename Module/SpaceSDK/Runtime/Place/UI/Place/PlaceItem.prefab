@@ -130,7 +130,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5819527497872378790}
-  - component: {fileID: 1450696831470930155}
+  - component: {fileID: -4271823545178685169}
   m_Layer: 5
   m_Name: PlaceItem
   m_TagString: Untagged
@@ -153,14 +153,14 @@ RectTransform:
   - {fileID: 1196775734852578754}
   - {fileID: 591592841312082863}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1450696831470930155
+--- !u!114 &-4271823545178685169
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

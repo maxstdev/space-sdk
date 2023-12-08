@@ -4,18 +4,17 @@ using MaxstUtils;
 using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace MaxstXR.Place
 {
 	public class BundleDownloadViewModel
 	{
-		public LiveEvent<Place, Spot> NotifyInitialized = new();
-		public LiveEvent<Place, Spot> NotifyCatalogUpdated = new();
-		public LiveEvent<Place, Spot, long> NotifySizeDownloaded = new();
-		public LiveEvent<Place, Spot, bool> NotifyDownloadFinished = new();
-		public LiveEvent<Place, Spot, DownloadProgressStatus> NotifyDownloadProgress = new();
+		public LiveEvent<string> NotifyInitialized = new();
+		public LiveEvent<string> NotifyCatalogUpdated = new();
+		public LiveEvent<string, long> NotifySizeDownloaded = new();
+		public LiveEvent<string, bool> NotifyDownloadFinished = new();
+		public LiveEvent<string, DownloadProgressStatus> NotifyDownloadProgress = new();
 		private string label;
 		private AsyncOperationHandle DownloadHandler;
 		private long totalSize;
@@ -31,8 +30,11 @@ namespace MaxstXR.Place
             ResourceAPIServiceHelper = ResourceAPIServiceHelper.Build(parent);
         }
 
-		public async UniTask InitializedSystemAsync(Place place, Spot spot, string label) {
+		public async UniTask InitializedSystemAsync(string space, string label, string key = null) {
             this.label = label;
+
+			if (DownloadHandler.IsValid())
+				Addressables.Release(DownloadHandler);
 
 #if FORCE_ADDRESSABLES_CLEAR_CACHE
 			await Addressables.ClearDependencyCacheAsync(label, true);
@@ -42,10 +44,20 @@ namespace MaxstXR.Place
 
             var BearerAccessClientToken = ResourceAPIServiceHelper.BearerAccessClientToken;
 
-            MapSpot mapResource = await GetMapResource(BearerAccessClientToken, place);
+			MapSpot mapResource = null;
+			if (VersionController.Instance.CurrentMode == VersionController.Mode.Modern)
+			{
+                mapResource = await GetMapResource(BearerAccessClientToken, key);
+            }
+			else
+			{
+				long.TryParse(key, out var lk);
+                mapResource = await GetMapResource(BearerAccessClientToken, lk);
+            }
+
             //string remoteCatalogPath = await GetResourcePublicInfo(clientToken, mapResource.resource.GetResourcePath());
-            
-			string remoteCatalogPath = mapResource.resource.GetResourcePath();
+
+            string remoteCatalogPath = mapResource.resource.GetResourcePath();
             
             Addressables.WebRequestOverride = (unityWebRequest) => {
                 Debug.Log($"ModifyWebRequest Uri {unityWebRequest.uri}");
@@ -56,18 +68,23 @@ namespace MaxstXR.Place
             Debug.Log($"remoteCatalogPath : {remoteCatalogPath}");
             await Addressables.LoadContentCatalogAsync(remoteCatalogPath).Task;
 
-            NotifyInitialized.Post(place, spot);
+            NotifyInitialized.Post(space);
         }
 
-		private async UniTask<MapSpot> GetMapResource(string bearerToken, Place place) {
-            return await ResourceAPIServiceHelper.ReqMapSpots(bearerToken, place.placeId);
+		private async UniTask<MapSpot> GetMapResource(string bearerToken, string key) {
+            return await ResourceAPIServiceHelper.ReqMapSpots(bearerToken, key);
         }
 
-		private async UniTask<string> GetResourcePublicInfo(string bearerToken, string resourcePath) {
-            return await ResourceAPIServiceHelper.GetResourcePublicInfo(bearerToken, resourcePath);
+        private async UniTask<MapSpot> GetMapResource(string bearerToken, long id)
+        {
+            return await ResourceAPIServiceHelper.ReqMapSpots(bearerToken, id);
         }
 
-		public async UniTask UpdateCatalogAsync(Place place, Spot spot)
+        //private async UniTask<string> GetResourcePublicInfo(string bearerToken, string resourcePath) {
+        //    return await ResourceAPIServiceHelper.GetResourcePublicInfo(bearerToken, resourcePath);
+        //}
+
+		public async UniTask UpdateCatalogAsync(string space)
 		{
 			var handle = await Addressables.CheckForCatalogUpdates().Task;
 			if (handle.Count > 0)
@@ -75,25 +92,25 @@ namespace MaxstXR.Place
 				await Addressables.UpdateCatalogs(handle);
 			}
 
-			NotifyCatalogUpdated.Post(place, spot);
+			NotifyCatalogUpdated.Post(space);
 		}
 
-		public async UniTask DownloadSizeAsync(Place place, Spot spot)
+		public async UniTask DownloadSizeAsync(string space)
 		{
 			AsyncOperationHandle<long> size = Addressables.GetDownloadSizeAsync(label);
 			await size.Task;
 			totalSize = size.Result;
-			NotifySizeDownloaded.Post(place, spot, totalSize);
+			NotifySizeDownloaded.Post(space, totalSize);
 		}
 
-		public async UniTask StartDownloadAsync(Place place, Spot spot)
+		public async UniTask StartDownloadAsync(string space)
 		{
 			DownloadHandler = Addressables.DownloadDependenciesAsync(label);
 			await DownloadHandler.Task;
-			NotifyDownloadFinished.Post(place, spot, DownloadHandler.Status == AsyncOperationStatus.Succeeded);
+			NotifyDownloadFinished.Post(space, DownloadHandler.Status == AsyncOperationStatus.Succeeded);
 		}
 
-		public void UpdateDownloadStatus(Place place, Spot spot)
+		public void UpdateDownloadStatus(string space)
 		{
 			if (DownloadHandler.IsValid()
 				&& false == DownloadHandler.IsDone
@@ -103,8 +120,7 @@ namespace MaxstXR.Place
 				long curSize = status.DownloadedBytes;
 				long remainedSize = totalSize - curSize;
 
-				NotifyDownloadProgress.Post(place, spot,
-					new DownloadProgressStatus(status.DownloadedBytes, totalSize, remainedSize, status.Percent));
+				NotifyDownloadProgress.Post(space, new DownloadProgressStatus(status.DownloadedBytes, totalSize, remainedSize, status.Percent));
 			}
 		}
 	}

@@ -28,7 +28,7 @@ namespace MaxstXR.Place
             VpsListUpadate += NotifyMinimapBounds;
             if (SceneViewModel.PlaceScriptableObjects)
             {
-                LoadPlaceSO(SceneViewModel.PlaceScriptableObjects, SceneViewModel.CurrentSpot).Forget();
+                LoadSpaceSO(SceneViewModel.PlaceScriptableObjects).Forget();
             }
         }
 
@@ -39,7 +39,7 @@ namespace MaxstXR.Place
 
         private void OnDisable()
         {
-            PlaceAddressable.UnloadAsset();
+            PlaceAddressable.UnloadAllAssets();
             OnUnsubscribe();
         }
 
@@ -67,12 +67,12 @@ namespace MaxstXR.Place
             DisposeTracker();
         }
 
-        public async UniTask LoadPlaceSO(PlaceScriptableObjects placeSO, Spot spot)
+        public async UniTask LoadSpaceSO(PlaceScriptableObjects placeSO)
         {
             if (placeSO.ProcessMapping())
             {
-                await ProcessLoadPov(placeSO, spot);
-                await LoadPlace(placeSO, spot);
+                await ProcessLoadPov(placeSO);
+                await LoadSpace(placeSO);
                 mapEventDispatcher.MapLoaded();
             }
             else
@@ -80,6 +80,20 @@ namespace MaxstXR.Place
                 mapEventDispatcher.MapUnLoaded();
             }
         }
+
+        //public async UniTask LoadPlaceSO(PlaceScriptableObjects placeSO, Place place)
+        //{
+        //    if (placeSO.ProcessMapping())
+        //    {
+        //        await ProcessLoadPov(placeSO, place);
+        //        await LoadPlace(placeSO, place);
+        //        mapEventDispatcher.MapLoaded();
+        //    }
+        //    else
+        //    {
+        //        mapEventDispatcher.MapUnLoaded();
+        //    }
+        //}
 
         public GameObject FindMinimapObject()
         {
@@ -116,25 +130,24 @@ namespace MaxstXR.Place
             ApplyOcclusion();
         }
 
-        private async UniTask ProcessLoadPov(PlaceScriptableObjects placeSO, Spot spot)
+        private async UniTask ProcessLoadPov(PlaceScriptableObjects placeSO)
         {
             PlaceAddressable.LoadPov(placeSO, XRStudio);
-            await OnPovLoadComplete(placeSO, spot);
+            await OnPovLoadComplete(placeSO);
         }
 
-        private async UniTask ProcessLoadMap(PlaceScriptableObjects placeSO, Spot spot)
+        private async UniTask ProcessLoadMap(PlaceScriptableObjects placeSO)
         {
             PlaceAddressable.LoadMap(placeSO, TrackableRoot);
-
-            await OnMapLoadComplete(placeSO, spot);
+            await OnMapLoadComplete(placeSO);
         }
 
-        private async UniTask LoadPlace(PlaceScriptableObjects placeSO, Spot spot)
+        private async UniTask LoadSpace(PlaceScriptableObjects placeSO)
         {
-            await ProcessLoadMap(placeSO, spot);
+            await ProcessLoadMap(placeSO);
         }
 
-        private async UniTask OnPovLoadComplete(PlaceScriptableObjects placeSO, Spot spot)
+        private async UniTask OnPovLoadComplete(PlaceScriptableObjects placeSO)
         {
             await UniTask.WaitForEndOfFrame(this);
 
@@ -144,23 +157,32 @@ namespace MaxstXR.Place
             }
             else
             {
-                placeSO.ShowSelectedPovObjs(XRStudio, ibrCullBackMaterial, ibrCullFrontMaterial, spot.vpsSpotName, (sc) =>
+                placeSO.ShowSelectedPovObjs(XRStudio, ibrCullBackMaterial, ibrCullFrontMaterial, SceneViewModel.CurrentMapKey(), (sc) =>
                 {
                     XrSettings.SpotController.Value = sc;
                 });
             }
         }
 
-        private async UniTask OnMapLoadComplete(PlaceScriptableObjects palceSO, Spot spot)
+        private async UniTask OnMapLoadComplete(PlaceScriptableObjects placeSO)
         {
             await UniTask.WaitForEndOfFrame(this);
 
-            MinimapViewModel.PlaceMapLoadComplete.Post(SceneViewModel.CurrentPlace);
-
+#if false
+            MinimapViewModel.SpaceMapLoadComplete.Post(SceneViewModel.CurrentSpace);
+#endif
             SceneViewModel.PlaceLoadComplete.Post();
 
             OnLoadedTrackable();
-            palceSO.ShowSelectedMapObjs(XRStudio, TrackableRoot, spot.vpsSpotName);
+
+            if (VersionController.Instance.CurrentMode == VersionController.Mode.Modern)
+            {
+                placeSO.ShowSelectedMapObjs(XRStudio, TrackableRoot);
+            }
+            else
+            {
+                placeSO.ShowSelectedMapObjs(XRStudio, TrackableRoot, SceneViewModel.CurrentMapKey());
+            }
 
             var pc = XRStudio.GetComponentInChildren<PovController>(true);
             await StartCoroutine(ApplyPose(new KnnStartPose
@@ -176,9 +198,9 @@ namespace MaxstXR.Place
 
             foreach (var trackable in vPSTrackablesList)
             {
-                if (string.IsNullOrEmpty(trackable.navigationLocation)) continue;
+                if (string.IsNullOrEmpty(trackable.spaceId)) continue;
 
-                trackableBounds.Add(trackable.navigationLocation, GetMaxBounds(trackable.gameObject));
+                trackableBounds.Add(trackable.spaceId, GetMaxBounds(trackable.gameObject));
                 //Bounds bounds = GetMaxBounds(trackable.gameObject);
                 //Debug.Log($"NotifyMinimapBound : {bounds}/{bounds.size}/{bounds.extents.magnitude}");
                 //yield return null;

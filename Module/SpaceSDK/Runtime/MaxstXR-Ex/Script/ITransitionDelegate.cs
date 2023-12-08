@@ -3,16 +3,26 @@ using UnityEngine.Networking;
 
 namespace MaxstXR.Extension
 {
+    public enum TransitionStatus
+    {
+        Idle = 0,
+        DownloadStarted,
+        DownloadEnded,
+        DownloadError,
+        AnimateStarted,
+        AnimateEnded,
+    }
+
     public interface ITransitionDelegate
     {
-        void DownloadStart();
-        void DownloadProgess(float f);
-        void DownloadComplete();
-        void DownloadException(Exception e);
-        void DownloadException(UnityWebRequest www);
+        void DownloadStart(PovKeyFrame keyFrame);
+        void DownloadProgess(PovKeyFrame keyFrame, float f);
+        void DownloadComplete(PovKeyFrame keyFrame);
+        void DownloadException(PovKeyFrame keyFrame, Exception e);
+        void DownloadException(PovKeyFrame keyFrame, UnityWebRequest www);
 
         //animation
-        void AnimationStarted(PovController current, object sourceObject) { }
-        void AnimationFinished(PovController next, object sourceObject) { }
+        void AnimationStarted(PovKeyFrame keyFrame) { }
+        void AnimationFinished(PovKeyFrame keyFrame) { }
     }
 }

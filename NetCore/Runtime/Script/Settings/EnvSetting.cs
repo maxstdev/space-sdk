@@ -1,5 +1,6 @@
 using UnityEngine;
 using Maxst.Passport;
+using System.Collections.Generic;
 
 namespace Maxst.Settings
 {
@@ -25,7 +26,7 @@ namespace Maxst.Settings
     {
         public static EnvSetting EnvSetting(this DomainType type)
         {
-            return EnvUrlSetting.Instance.EnvSettings[(int)type];
+            return EnvUrlSetting.Domains[type];
         }
     }
 
@@ -56,9 +57,37 @@ namespace Maxst.Settings
         public OpenIDConnectSetting OpenIDConnectSetting;
     }
 
-    [CreateAssetMenu(fileName = "EnvSetting", menuName = "Packages/Scriptable Dictionary/EnvSetting", order = 1000)]
-    public class EnvSetting : ScriptableDictionary<EnvType, EnvData>
+    
+    public abstract class EnvSetting
     {
+        public abstract Dictionary<EnvType, EnvData> Envs { get; }
+    }
 
+    public class EnvSettingFromMaxst : EnvSetting
+    {
+        public override Dictionary<EnvType, EnvData> Envs { get; } = new Dictionary<EnvType, EnvData>()
+        {
+            {
+                EnvType.Alpha,
+                new EnvData {
+                    authUrlSetting = AuthUrlSetting.Datas[EnvType.Alpha],
+                    OpenIDConnectSetting = OpenIDConnectSetting.Datas[EnvType.Alpha],
+                }
+            },
+            {
+                EnvType.Beta,
+                new EnvData {
+                    authUrlSetting = AuthUrlSetting.Datas[EnvType.Beta],
+                    OpenIDConnectSetting = OpenIDConnectSetting.Datas[EnvType.Beta],
+                }
+            },
+            {
+                EnvType.Prod,
+                new EnvData {
+                    authUrlSetting = AuthUrlSetting.Datas[EnvType.Prod],
+                    OpenIDConnectSetting = OpenIDConnectSetting.Datas[EnvType.Prod],
+                }
+            },
+        };
     }
 }

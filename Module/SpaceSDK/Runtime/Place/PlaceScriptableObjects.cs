@@ -73,12 +73,14 @@ namespace MaxstXR.Place
 
         public string GetPovObjName(string key)
         {
-            return spotMappingDic.Find(key)?.povName ?? "";
+            return (spotMappingDic.Values.Count > 0 ? spotMappingDic.Values.First().povName : "");
+            //return spotMappingDic.Find(key)?.povName ?? "";
         }
 
         public string GetTrackableObjName(string key)
         {
-            return spotMappingDic.Find(key)?.trackableName ?? "";
+            return (spotMappingDic.Values.Count > 0 ? spotMappingDic.Values.First().trackableName : "");
+            //return spotMappingDic.Find(key)?.trackableName ?? "";
         }
 
         public IEnumerable<GameObject> IteratorTrackable()
@@ -255,6 +257,23 @@ namespace MaxstXR.Place
                 XRStudio.GetComponentInChildren<PovManager>().Trackable = spotTrackableObj;
                 //XRAPI.Instance.InitPlaceSpot();
                 XRServiceManager.Instance(XRStudio).InitPlaceSpot();
+            }
+        }
+
+        /**
+         * Only one VPSTrackable exists.
+         */
+        public void ShowSelectedMapObjs(GameObject XRStudio, GameObject TrackableRoot)
+        {
+            var vpsTrackable = TrackableRoot.GetComponentInChildren<VPSTrackable>();
+            if (vpsTrackable)
+            {
+                vpsTrackable.gameObject.SetActive(true);
+                XRStudio.GetComponentInChildren<PovManager>().Trackable = vpsTrackable.gameObject;
+                //XRAPI.Instance.InitPlaceSpot();
+                //TODO:: check fix
+                XRServiceManager.Instance(XRStudio).InitPlaceSpot();
+
             }
         }
 

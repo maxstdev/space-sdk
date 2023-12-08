@@ -42,8 +42,8 @@ namespace MaxstXR.Place
         {
             Debug.Log("<color=green> Space Navi FindPath </color>");
 
-            var authorization = XRServiceManager.authorization;
-            var contentType = XRServiceManager.contentType;
+            var authorization = XRTokenManager.Instance.authorization;
+            var contentType = XRTokenManager.Instance.contentType;
 
             var ob = XRService.Instance.PostNaviData(
                 authorization,

@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.Networking;
 using UnityEngine.UI;
@@ -25,6 +26,8 @@ namespace MaxstXR.Extension
         private GameObject progressObject = null;
 
 		private bool isDrag = false;
+
+        public UnityEvent inputEvent = new();
 
         protected override void OnEnable()
         {
@@ -52,7 +55,10 @@ namespace MaxstXR.Extension
         private void StartInputKeyEvent()
         {
             StopInputKeyEvent();
-            inputKeyEventCoroutine = StartCoroutine(InputKeyEvent());
+            if (!cameraManager.IsARMode)
+            {
+                inputKeyEventCoroutine = StartCoroutine(InputKeyEvent());
+            }
         }
 
         private void StopInputKeyEvent()
@@ -68,31 +74,40 @@ namespace MaxstXR.Extension
         {
             yield return new WaitWhile(() =>
             {
+                int rightDir = 0;
+                int downDir = 0;
                 if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.D)
                     || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.S))
                 {
                     cameraManager.HandleKeyboardNavigation(this);
                 }
-                else if (Input.GetKey(KeyCode.LeftArrow))
-                {
-                    cameraManager.UpdateInputKeyRotate(false);
-                }
-                else if (Input.GetKey(KeyCode.RightArrow))
-                {
-                    cameraManager.UpdateInputKeyRotate();
-                }
-                else if (Input.GetKey(KeyCode.UpArrow))
-                {
-                    cameraManager.UpdateInputKeyUpDown();
-                }
-                else if (Input.GetKey(KeyCode.DownArrow))
-                {
-                    cameraManager.UpdateInputKeyUpDown(false);
-                }
-                else
-                {
 
+                if (Input.GetKey(KeyCode.LeftArrow))
+                {
+                    rightDir += -1;
                 }
+                if (Input.GetKey(KeyCode.RightArrow))
+                {
+                    rightDir += 1;
+                }
+                if (Input.GetKey(KeyCode.UpArrow))
+                {
+                    downDir += -1;
+                }
+                if (Input.GetKey(KeyCode.DownArrow))
+                {
+                    downDir += 1;
+                }
+                
+
+                if (rightDir != 0 || downDir !=0)
+                {
+                    cameraManager.UpdateInputKeyRotate(rightDir, downDir);
+                    inputEvent.Invoke();
+                    cameraManager.UpdateCursor();
+                    cameraManager.SearchPovNearCursor();
+                }
+
                 return true;
             });
         }
@@ -107,6 +122,7 @@ namespace MaxstXR.Extension
 					if (isDrag == false)
 					{
 						cameraManager.HandleMouseNavigation(this);
+                        inputEvent.Invoke();
 					}
 					
 					break;
@@ -123,7 +139,7 @@ namespace MaxstXR.Extension
             switch (eventData.button)
             {
                 case PointerEventData.InputButton.Left:
-                    
+                    inputEvent.Invoke();
                     break;
                 default:
                     break;
@@ -138,8 +154,7 @@ namespace MaxstXR.Extension
                 case PointerEventData.InputButton.Left:
                     cameraManager.UpdateInputRotate();
 					isDrag = true;
-
-					break;
+                    break;
                 default:
                     break;
             }
@@ -167,28 +182,28 @@ namespace MaxstXR.Extension
             }
         }
 
-        void ITransitionDelegate.DownloadStart()
+        void ITransitionDelegate.DownloadStart(PovKeyFrame keyFrame)
         {
             
         }
 
-        void ITransitionDelegate.DownloadProgess(float f)
+        void ITransitionDelegate.DownloadProgess(PovKeyFrame keyFrame, float f)
         {
             InstantiateProgress();
             //progressObject.GetComponentInChildren<Text>().text = $"{(int)f}%";
         }
 
-        void ITransitionDelegate.DownloadComplete()
+        void ITransitionDelegate.DownloadComplete(PovKeyFrame keyFrame)
         {
             DestroyProgress();
         }
 
-        void ITransitionDelegate.DownloadException(Exception e)
+        void ITransitionDelegate.DownloadException(PovKeyFrame keyFrame, Exception e)
         {
             DestroyProgress();
         }
 
-        void ITransitionDelegate.DownloadException(UnityWebRequest www)
+        void ITransitionDelegate.DownloadException(PovKeyFrame keyFrame,UnityWebRequest www)
         {
             DestroyProgress();
         }
