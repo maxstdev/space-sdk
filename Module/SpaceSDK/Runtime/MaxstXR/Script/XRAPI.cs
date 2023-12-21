@@ -1,4 +1,6 @@
 using JsonFx.Json;
+using Maxst.Passport;
+using Maxst.Settings;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,7 +17,7 @@ namespace maxstAR
         private SpaceData spaceData = null;
         private bool debugMode = false;
         private string debugTexturePath = "";
-        public string accessToken = "";
+        private string accessToken = "";
         public const string domain = "https://api.maxst.com/space";
         public const string domain2 = "https://api.maxst.com/vps";
         public const string naviURL = domain2 + "/v1/path";
@@ -49,8 +51,10 @@ namespace maxstAR
             this.spaceId = "";
         }
 
-        public void Start()
+        public async void Start()
         {
+            TokenRepo.Instance.passportConfig = XRSDKAuthConfig.Instance;
+            accessToken = await XRTokenManager.Instance.GetActiveToken(TokenRepo.Instance.passportConfig, attachTokenType: false);
             PovManager povManager = GetComponentInChildren<PovManager>(true);
             GameObject trackable = povManager.Trackable;
             VPSTrackable vPSTrackable = trackable.GetComponent<VPSTrackable>();
@@ -71,7 +75,7 @@ namespace maxstAR
 
             if (this.accessToken == "")
             {
-                Debug.LogError("No AccessToken");
+                return;
             }
 
             var headers = GetHeaders();

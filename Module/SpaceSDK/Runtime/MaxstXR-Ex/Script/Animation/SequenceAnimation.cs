@@ -22,6 +22,7 @@ namespace MaxstXR.Extension
 
         [SerializeField, HideInInspector] private List<ISequenceProperty> sequences = new List<ISequenceProperty>();
 
+        [field: SerializeField] public UnityEvent<List<ISequenceProperty>> SequenceListUpdate { get; private set; } = new UnityEvent<List<ISequenceProperty>>();
         [field: SerializeField] public UnityEvent<ISequenceProperty> SequenceStart { get; private set; } = new UnityEvent<ISequenceProperty>();
         [field: SerializeField] public UnityEvent<ISequenceProperty> SequenceResume { get; private set; } = new UnityEvent<ISequenceProperty>();
         [field: SerializeField] public UnityEvent<ISequenceProperty> SequencePause { get; private set; } = new UnityEvent<ISequenceProperty>();
@@ -61,6 +62,7 @@ namespace MaxstXR.Extension
             sequences.Clear();
             sequences.AddRange(sp);
             SequenceStatus.Value = SeqStatus.Idle;
+            SequenceListUpdate.Invoke(sequences.ToList());
             complete?.Invoke();
         }
 
