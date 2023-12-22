@@ -66,6 +66,14 @@ namespace MaxstXR.Place
             }
         }
 
+        public void SetBillboardMaterials(List<Material> materials)
+        {
+            if (materials != null)
+            {
+                billboardOrthographicMaterials.AddRange(materials);
+            }
+        }
+
         private void LateUpdate()
         {
             cameraUpdate?.Invoke();

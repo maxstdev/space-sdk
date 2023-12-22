@@ -16,7 +16,7 @@ namespace MaxstXR.Place
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void BeforeSceneLoad()
         {
-            VersionController.Instance.SwitchMode(VersionController.Mode.Legacy, 
+            VersionController.Instance.SwitchMode(VersionController.Mode.Modern, 
                 SpaceStep.PUBLIC,
                 EnvType.Prod);
         }

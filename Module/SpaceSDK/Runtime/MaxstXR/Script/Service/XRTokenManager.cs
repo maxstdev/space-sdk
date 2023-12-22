@@ -31,7 +31,7 @@ public class XRTokenManager
         }
     }
 
-    public async UniTask<string> GetActiveToken(PassportConfig config = null)//If there is no passport config, it means only usertoken is used.
+    public async UniTask<string> GetActiveToken(PassportConfig config = null, bool attachTokenType = true)//If there is no passport config, it means only usertoken is used.
     {
         var tokenRepo = TokenRepo.Instance;
         var userToken = tokenRepo.GetToken();
@@ -48,12 +48,16 @@ public class XRTokenManager
             Debug.Log($"XRTokenManager: userToken Empty");
             return null;
         }
-
+        
         var clientToken = await GetOrCreateClientToken(tokenRepo, config);
         if (clientToken != null)
         {
-            authorization = FormatToken(clientToken.access_token);
-            return authorization;
+            if(attachTokenType)
+            {
+                authorization = FormatToken(clientToken.access_token);
+                return authorization;
+            }
+            return clientToken.access_token;
         }
         Debug.Log($"XRTokenManager: client token is Empty");
         return null;
